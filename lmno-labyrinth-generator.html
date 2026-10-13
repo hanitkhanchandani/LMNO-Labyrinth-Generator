@@ -1,0 +1,3953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>LMNO Labyrinth Generator</title>
+<meta name="description" content="Generate, solve and export circular labyrinths built around the LMNO logo — in 2D or extruded 3D.">
+<meta name="theme-color" content="#0a0a0a">
+<meta property="og:title" content="LMNO Labyrinth Generator">
+<meta property="og:description" content="Generate, solve and export circular labyrinths built around the LMNO logo — in 2D or extruded 3D.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%23c32026' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%23c32026' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+:root {
+  --bg: #1a1a1a; --bg2: #222222; --bg3: #2a2a2a;
+  --border: #2e2e2e; --border2: #383838;
+  --text: #cccccc; --text2: #777777; --text3: #4a4a4a;
+  --accent: #5588ff;
+  --slider-thumb: #b0b0b0; --slider-track: #333333;
+  --btn-bg: transparent; --btn-border: #2e2e2e; --btn-text: #999;
+  --pri-bg: #d0d0d0; --pri-text: #111111;
+  --tog-off: #333; --tog-on: #aaa;
+  --select-bg: #1a1a1a;
+  --canvas-area: #000000;
+  --topbar-bg: #1c1c1c;
+  --sb-resize: #2e2e2e;
+  --text-bar: #7a7a7a;
+  --radius: 8px;
+  --radius-sm: 5px;
+}
+.theme-light {
+  --bg: #fbfaf8; --bg2: #f6f4f0; --bg3: #ededE7;
+  --border: #e4e1d9; --border2: #d3cfc4;
+  --text: #232220; --text2: #77746c; --text3: #a8a49a;
+  --accent: #b5622f;
+  --slider-thumb: #232220; --slider-track: #ddd8cd;
+  --btn-bg: transparent; --btn-border: #ddd8cd; --btn-text: #55524a;
+  --pri-bg: #232220; --pri-text: #fbfaf8;
+  --tog-off: #ddd8cd; --tog-on: #232220;
+  --select-bg: #f6f4f0;
+  --canvas-area: #ffffff;
+  --topbar-bg: #f6f4f0;
+  --sb-resize: #e4e1d9;
+  --text-bar: #77746c;
+}
+.theme-red {
+  --bg: #180b0b; --bg2: #1f0e0e; --bg3: #271111;
+  --border: #3a1414; --border2: #4a1818;
+  --text: #ecd9d9; --text2: #a06b6b; --text3: #6b3d3d;
+  --accent: #d84b3a;
+  --slider-thumb: #d84b3a; --slider-track: #3d1515;
+  --btn-bg: transparent; --btn-border: #3a1414; --btn-text: #b07a7a;
+  --pri-bg: #d84b3a; --pri-text: #fff;
+  --tog-off: #2a0e0e; --tog-on: #d84b3a;
+  --select-bg: #180b0b;
+  --canvas-area: #000000;
+  --topbar-bg: #180b0b;
+  --sb-resize: #3a1414;
+  --text-bar: #a06b6b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; height: 100dvh; overflow: hidden; }
+button, select, input { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+body {
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: 11.5px;
+  background: var(--bg);
+  color: var(--text);
+  display: flex; flex-direction: column;
+  transition: background 0.25s, color 0.25s;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── TOP BAR ── */
+#topbar {
+  height: 52px; min-height: 52px;
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 18px; gap: 0; z-index: 100; user-select: none;
+}
+.tb-brand {
+  font-family: 'Zilla Slab', Georgia, serif;
+  font-size: 15px; font-weight: 600; letter-spacing: 0.01em;
+  color: var(--text); white-space: nowrap; margin-right: 22px;
+}
+.tb-sep { width: 1px; height: 20px; background: var(--border2); margin: 0 16px; }
+.tb-group { display: flex; align-items: center; gap: 3px; }
+.tb-btn {
+  padding: 6px 12px; background: transparent; border: 1px solid transparent;
+  color: var(--text-bar); font-family: 'Roboto Mono', monospace;
+  font-size: 10px; cursor: pointer; border-radius: var(--radius-sm);
+  letter-spacing: 0.05em; white-space: nowrap;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.tb-btn:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+.tb-spacer { flex: 1; }
+.tb-dim-label { color: var(--text-bar); font-size: 10px; }
+.tb-canvas-size { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--text2); }
+.tb-canvas-size input[type=number] {
+  width: 68px; height: 30px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text); font-family: 'Roboto Mono', monospace;
+  border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 500; padding: 2px 8px;
+  text-align: center; outline: none; letter-spacing: 0.03em;
+}
+.tb-canvas-size input[type=number]:focus { border-color: var(--accent); }
+.tb-sep-v { width: 1px; height: 20px; background: var(--border2); margin: 0 14px; }
+.tb-export-group { align-items: center; gap: 6px; }
+.tb-export-lbl { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-bar); padding: 0 4px; }
+.tb-select {
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text-bar); font-family: 'Roboto Mono', monospace;
+  border-radius: var(--radius-sm);
+  font-size: 9px; padding: 3px 6px; outline: none; cursor: pointer;
+  letter-spacing: 0.04em; height: 26px;
+}
+.tb-select:focus, .tb-select:hover { border-color: var(--accent); color: var(--text); }
+.tb-canvas-tog {
+  background: transparent; border: 1px solid var(--border2);
+  color: var(--text2); font-family: 'Roboto Mono', monospace;
+  border-radius: var(--radius-sm);
+  font-size: 9px; letter-spacing: 0.08em; padding: 5px 10px;
+  cursor: pointer; transition: all 0.12s; white-space: nowrap;
+}
+.tb-canvas-tog:hover { border-color: var(--accent); color: var(--accent); }
+.tb-canvas-tog.active { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+#size-warn { display: none; color: #e06a4a; font-size: 9px; letter-spacing: 0.06em; }
+
+/* ── MAIN ROW ── */
+#mainrow { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+
+/* ── SIDEBAR ── */
+#sidebar {
+  width: 300px; min-width: 220px; max-width: 440px;
+  background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+  position: relative; flex-shrink: 0;
+}
+#sb-header {
+  flex-shrink: 0; padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2); z-index: 5;
+}
+#sb-scroll {
+  flex: 1; overflow-y: auto; padding: 18px 20px 24px;
+  display: flex; flex-direction: column; gap: 22px;
+  scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+}
+#sb-scroll::-webkit-scrollbar { width: 5px; }
+#sb-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+#sb-resizer {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 5px;
+  cursor: col-resize; background: var(--sb-resize); z-index: 10;
+  opacity: 0; transition: opacity 0.15s;
+}
+#sb-resizer:hover, #sb-resizer.dragging { opacity: 1; background: var(--accent); }
+.brand-title {
+  font-family: 'Zilla Slab', Georgia, serif;
+  font-size: 17px; font-weight: 600;
+  color: var(--text); line-height: 1.3; letter-spacing: 0.01em;
+}
+.brand-sub {
+  font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text3); margin-top: 4px;
+}
+hr { border: none; border-top: 1px solid var(--border); }
+
+/* ── SECTION GROUPS ── */
+.group { display: flex; flex-direction: column; gap: 14px; }
+.group-title {
+  font-family: 'Zilla Slab', Georgia, serif; font-weight: 600;
+  font-size: 13.5px; letter-spacing: 0.01em; color: var(--text);
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.sec {
+  font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 2px;
+}
+.ctrl { display: flex; flex-direction: column; gap: 12px; }
+.row { display: flex; flex-direction: column; gap: 5px; }
+.lbl { font-size: 9.5px; letter-spacing: 0.03em; color: var(--text2); }
+.ri { display: flex; align-items: center; gap: 4px; }
+.ri input[type=range] {
+  --thumb: 11px; --track-h: 3px;
+  flex: 1; min-width: 0; height: var(--thumb); margin: 0;
+  -webkit-appearance: none; appearance: none;
+  background: transparent; outline: none; cursor: pointer;
+}
+.ri input[type=range]::-webkit-slider-runnable-track {
+  height: var(--track-h); border-radius: 2px; background: var(--slider-track);
+}
+.ri input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: var(--thumb); height: var(--thumb); border: none; border-radius: 50%;
+  margin-top: calc((var(--track-h) - var(--thumb)) / 2);   /* centre the dot on the track */
+  background: var(--slider-thumb); cursor: pointer;
+  transition: transform 0.12s; box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.ri input[type=range]::-moz-range-track {
+  height: var(--track-h); border-radius: 2px; background: var(--slider-track);
+}
+.ri input[type=range]::-moz-range-thumb {
+  width: var(--thumb); height: var(--thumb); box-sizing: border-box; border: none; border-radius: 50%;
+  background: var(--slider-thumb); cursor: pointer;
+}
+.ri input[type=range]:hover::-webkit-slider-runnable-track { background: var(--border2); }
+.ri input[type=range]:hover::-moz-range-track { background: var(--border2); }
+.ri input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+/* Arrow step buttons flanking each slider */
+.sl-arrow {
+  width: 17px; height: 17px; flex-shrink: 0;
+  background: transparent; border: none;
+  color: var(--text3); font-size: 11px; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  border-radius: 3px; padding: 0; transition: color 0.1s, background 0.1s;
+  user-select: none;
+}
+.sl-arrow:hover { color: var(--text); background: var(--bg3); }
+.val {
+  font-size: 9.5px; color: var(--text2);
+  min-width: 40px; text-align: right; font-variant-numeric: tabular-nums;
+}
+select {
+  width: 100%; background: var(--select-bg);
+  border: 1px solid var(--border2); color: var(--text);
+  border-radius: var(--radius-sm);
+  font-family: 'Roboto Mono', monospace; font-size: 10.5px;
+  padding: 7px 9px; outline: none; cursor: pointer;
+}
+select:hover { border-color: var(--accent); }
+.trow {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 10px; color: var(--text2); gap: 8px;
+}
+.tog {
+  width: 30px; height: 17px; background: var(--tog-off);
+  border-radius: 9px; cursor: pointer; position: relative;
+  transition: background 0.15s; flex-shrink: 0;
+}
+.tog.on { background: var(--tog-on); }
+.tog.on.t3d { background: var(--accent); }
+.tog::after {
+  content: ''; position: absolute; width: 11px; height: 11px;
+  background: var(--bg); border-radius: 50%; top: 3px; left: 3px;
+  transition: left 0.15s; box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+}
+.tog.on::after { left: 16px; }
+.color-swatches { display: flex; gap: 6px; }
+.swatch {
+  width: 30px; height: 24px; border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  font-family: 'Roboto Mono', monospace; font-size: 8px; font-weight: 500;
+  cursor: pointer; transition: all 0.12s; letter-spacing: 0.05em;
+}
+.swatch-white { background: #e8e8e8; color: #222; }
+.swatch-black { background: #1a1a1a; color: #aaa; }
+.swatch-red   { background: #c32026; color: #fff; }
+.swatch.active { outline: 2px solid var(--accent); outline-offset: 1px; }
+#sb-bottom {
+  padding: 16px 20px; border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+button.sb-btn {
+  padding: 10px 12px; background: var(--btn-bg);
+  border: 1px solid var(--btn-border); color: var(--btn-text);
+  border-radius: var(--radius-sm);
+  font-family: 'Roboto Mono', monospace; font-size: 9.5px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  cursor: pointer; transition: all 0.12s; text-align: center; width: 100%;
+}
+button.sb-btn:hover { background: var(--bg3); border-color: var(--border2); color: var(--text); }
+button.sb-btn.pri { background: var(--pri-bg); color: var(--pri-text); border-color: var(--pri-bg); font-size: 10.5px; padding: 12px; }
+button.sb-btn.pri:hover { opacity: 0.88; }
+button.sb-btn.subtle { border-color: transparent; opacity: 0.55; font-size: 9px; }
+button.sb-btn.subtle:hover { opacity: 1; background: var(--bg3); }
+button.sb-btn.solving { border-color: var(--accent); color: var(--accent); }
+/* OBJ export only usable in 3D mode */
+#btn-obj { opacity: 0.35; }
+body.mode3d #btn-obj { opacity: 1; }
+
+/* ── DISCLOSURE (advanced / secondary controls) ── */
+details.adv { border-top: 1px dashed var(--border); padding-top: 10px; }
+details.adv summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px;
+  font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text3); user-select: none; transition: color 0.12s;
+}
+details.adv summary::-webkit-details-marker { display: none; }
+details.adv summary:hover { color: var(--text2); }
+details.adv summary::before {
+  content: '▸'; font-size: 8px; transition: transform 0.15s; display: inline-block;
+}
+details.adv[open] summary::before { transform: rotate(90deg); }
+details.adv[open] summary { margin-bottom: 12px; color: var(--text2); }
+details.adv > .ctrl { padding-top: 2px; }
+details.adv.sub { border-top: none; padding-top: 2px; }
+
+/* ── FACE COLOUR PICKER ── */
+.face-colour-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 2px; cursor: pointer; border-radius: var(--radius-sm);
+  transition: background 0.1s;
+}
+.face-colour-row:hover { background: var(--bg3); }
+.fc-swatch {
+  width: 24px; height: 24px; border-radius: 5px;
+  border: 1px solid rgba(255,255,255,0.15); flex-shrink: 0;
+}
+.fc-label { font-size: 9.5px; color: var(--text2); letter-spacing: 0.03em; }
+#fc-popover {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 10px; margin-top: 4px;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.fc-presets { display: flex; gap: 5px; }
+.fc-preset {
+  width: 28px; height: 28px; border-radius: var(--radius-sm); cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.15); flex-shrink: 0;
+  transition: transform 0.1s;
+}
+.fc-preset:hover { transform: scale(1.12); }
+.fc-preset.active { outline: 2px solid var(--accent); outline-offset: 1px; }
+#fc-wheel { width: 100%; height: 28px; border: none; padding: 0; cursor: pointer; border-radius: var(--radius-sm); background: none; }
+#fc-hex {
+  width: 100%; background: var(--bg); border: 1px solid var(--border2);
+  color: var(--text); font-family: 'Roboto Mono', monospace;
+  border-radius: var(--radius-sm);
+  font-size: 10.5px; padding: 5px 8px; outline: none;
+  letter-spacing: 0.05em;
+}
+
+/* ── DIFFICULTY BUTTONS ── */
+.diff-row { display: flex; gap: 6px; }
+.diff-btn {
+  flex: 1; padding: 8px 4px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text3); font-family: 'Roboto Mono', monospace;
+  border-radius: var(--radius-sm);
+  font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  cursor: pointer; transition: all 0.12s;
+}
+.diff-btn:hover { border-color: var(--accent); color: var(--accent); }
+.diff-btn.active { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+/* ── CANVAS AREA ── */
+#wrap {
+  flex: 1; position: relative; overflow: hidden;
+  background: var(--canvas-area); min-width: 0;
+}
+/* 2D canvas */
+#mainCanvas {
+  position: absolute; left: 0; top: 0;
+  display: block; pointer-events: none; z-index: 2;
+}
+/* Three.js WebGL canvas */
+#threeCanvas {
+  position: absolute; left: 0; top: 0;
+  display: none;
+  cursor: default; z-index: 1;
+}
+/* When 3D active: threeCanvas renders WebGL, mainCanvas sits above it as transparent overlay for solution path */
+body.mode3d #threeCanvas { display: block; pointer-events: auto; }
+body.mode3d #mainCanvas { display: block; pointer-events: none; }
+
+/* Solution thumbnail wrapper — top-left of viewport, only visible in 3D mode */
+#thumb-wrap {
+  position: absolute; top: 14px; left: 14px; z-index: 25;
+  display: none; flex-direction: column;
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: var(--radius); overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+}
+body.mode3d #thumb-wrap { display: flex; }
+#solutionThumb {
+  width: 160px; height: 160px;
+  display: block; pointer-events: none;
+  background: var(--bg);
+}
+#thumb-ctrls {
+  display: flex; justify-content: flex-end;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(3px);
+  padding: 3px 4px; gap: 2px;
+}
+#thumb-ctrls button {
+  width: 18px; height: 18px; padding: 0;
+  background: transparent; border: none;
+  color: rgba(255,255,255,0.6); font-size: 12px; line-height: 1;
+  cursor: pointer; border-radius: 3px; transition: color 0.1s, background 0.1s;
+  display: flex; align-items: center; justify-content: center;
+}
+#thumb-ctrls button:hover { color: #fff; background: rgba(255,255,255,0.14); }
+
+/* ── ZOOM CONTROLS ── */
+#zoom-ctrls {
+  position: absolute; bottom: 38px; right: 14px;
+  display: flex; flex-direction: column; gap: 4px; z-index: 20;
+}
+.zoom-btn {
+  width: 30px; height: 30px;
+  background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text2); font-size: 15px; line-height: 1;
+  border-radius: var(--radius-sm);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.zoom-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── STATUS BAR ── */
+#statusbar {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 26px;
+  background: var(--topbar-bg); border-top: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 14px; gap: 16px;
+  font-size: 8.5px; letter-spacing: 0.08em; color: var(--text-bar);
+  text-transform: uppercase; z-index: 15;
+}
+#statusbar span { white-space: nowrap; }
+.sb-credits { margin-left: auto; font-size: 8.5px; letter-spacing: 0.03em; text-transform: none; }
+.sb-credits a { color: var(--text-bar); text-decoration: none; }
+.sb-credits a:hover { color: var(--accent); }
+#zoom-info { margin-left: 14px; }
+
+/* ── TOP-RIGHT OVERLAY BUTTONS ── */
+#top-right-btns {
+  position: absolute; top: 14px; right: 14px;
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-end; z-index: 20;
+}
+#btn3d-quick {
+  background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text2); font-family: 'Roboto Mono', monospace;
+  border-radius: var(--radius-sm);
+  font-size: 9.5px; letter-spacing: 0.1em; padding: 7px 12px;
+  cursor: pointer; transition: all 0.15s; text-transform: uppercase;
+  display: flex; align-items: center; gap: 7px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+#btn3d-quick:hover { border-color: var(--accent); color: var(--accent); }
+#btn3d-quick.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+#btn3d-quick .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; }
+
+/* ── FRENZY (tucked away — power-user easter egg) ── */
+#btn-frenzy {
+  background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text3); font-family: 'Roboto Mono', monospace;
+  border-radius: var(--radius-sm);
+  font-size: 8.5px; letter-spacing: 0.1em; padding: 6px 10px;
+  cursor: pointer; transition: all 0.15s; text-transform: uppercase;
+  display: flex; align-items: center; gap: 6px; opacity: 0.55;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+#btn-frenzy:hover { opacity: 1; border-color: #c32026; color: #c32026; }
+#btn-frenzy.on { opacity: 1; background: rgba(195,32,38,0.12); border-color: #c32026; color: #ff5555; box-shadow: 0 0 8px rgba(195,32,38,0.4); }
+.frenzy-dot { width: 6px; height: 6px; border-radius: 50%; background: #3a1212; display: inline-block; transition: background 0.15s; }
+#btn-frenzy.on .frenzy-dot { background: #ff3333; box-shadow: 0 0 6px #ff3333; animation: frenzy-pulse 1s ease-in-out infinite; }
+@keyframes frenzy-pulse {
+  0%,100% { box-shadow: 0 0 4px #ff3333; }
+  50% { box-shadow: 0 0 12px #ff3333, 0 0 20px rgba(255,51,51,0.4); }
+}
+body.frenzy-mode input[type=range]::-webkit-slider-thumb { background: #c32026; }
+body.frenzy-mode .ri input[type=range] { background: #3a1212; }
+body.frenzy-mode .val { color: #ff6666; }
+body.frenzy-mode .lbl { color: #c32026; }
+.frenzy-input {
+  display: none; width: 58px; height: 22px;
+  background: #1a0a0a; border: 1px solid #c32026;
+  border-radius: var(--radius-sm);
+  color: #ff6666; font-family: 'Roboto Mono', monospace; font-size: 9px;
+  padding: 1px 4px; text-align: center; outline: none; flex-shrink: 0;
+}
+#frenzy-modal {
+  display: none; position: fixed; inset: 0; z-index: 2000;
+  align-items: center; justify-content: center; background: rgba(0,0,0,0.85);
+}
+#frenzy-modal.show { display: flex; }
+.frenzy-modal-inner {
+  background: #0a0505; border: 1px solid #c32026; border-radius: var(--radius);
+  padding: 32px 36px; max-width: 420px; width: 90%;
+  box-shadow: 0 0 40px rgba(195,32,38,0.3); font-family: 'Roboto Mono', monospace;
+}
+.frenzy-modal-title { font-family: 'Zilla Slab', serif; font-size: 18px; color: #ff4444; letter-spacing: 0.03em; margin-bottom: 16px; text-shadow: 0 0 20px rgba(255,68,68,0.5); }
+.frenzy-modal-body { font-size: 10.5px; color: #cc8888; line-height: 1.8; margin-bottom: 20px; }
+.frenzy-modal-btns { display: flex; gap: 10px; }
+.frenzy-modal-btns button { flex: 1; padding: 11px; border-radius: var(--radius-sm); font-family: 'Roboto Mono', monospace; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
+.frenzy-confirm { background: #c32026; color: #fff; border: none; }
+.frenzy-confirm:hover { background: #ff3333; }
+.frenzy-cancel { background: transparent; color: #7a4444; border: 1px solid #3a1212; }
+.frenzy-cancel:hover { border-color: #c32026; color: #c32026; }
+
+/* ── 3D SVG MODAL ── */
+#svg3dModal { display: none; position: fixed; inset: 0; z-index: 1000; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); }
+
+/* cap colour row */
+.row-2col { display: flex; gap: 8px; }
+.row-2col .row { flex: 1; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RESPONSIVE / TOUCH
+   ═══════════════════════════════════════════════════════════════════════ */
+#wrap { touch-action: none; }
+#sheet-chev, .sheet-grip { display: none; }
+#sb-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+/* Top bar never wraps or squashes: it scrolls sideways when space runs out */
+#topbar { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+#topbar::-webkit-scrollbar { display: none; }
+#topbar > * { flex-shrink: 0; }
+.tb-spacer { min-width: 6px; }
+
+/* Mid-size screens: slimmer sidebar */
+@media (max-width: 1100px) {
+  #sidebar { width: 264px; }
+  .tb-brand { display: none; }
+}
+
+/* Touch devices & small screens: bigger, easier targets */
+@media (pointer: coarse), (max-width: 860px) {
+  .ri input[type=range] { --thumb: 18px; --track-h: 4px; }
+  .sl-arrow { width: 30px; height: 30px; font-size: 17px; }
+  .tog { width: 44px; height: 26px; border-radius: 13px; }
+  .tog::after { width: 20px; height: 20px; top: 3px; left: 3px; }
+  .tog.on::after { left: 21px; }
+  .lbl, .val { font-size: 11.5px; }
+  .trow { font-size: 12.5px; }
+  .diff-btn { padding: 12px 4px; font-size: 10px; }
+  .swatch { width: 44px; height: 34px; font-size: 10px; }
+  .face-colour-row { padding: 9px 2px; }
+  details.adv summary { padding: 8px 0; font-size: 10px; }
+  button.sb-btn { padding: 13px 12px; font-size: 11px; }
+  button.sb-btn.pri { padding: 14px 12px; font-size: 12px; }
+  input[type=number], select, #fc-hex { font-size: 16px; }
+  select { padding: 11px 10px; }
+  .tb-select { height: 36px; font-size: 13px; padding: 4px 8px; }
+  .tb-canvas-size input[type=number] { height: 38px; width: 78px; }
+  .tb-btn, .tb-canvas-tog { padding: 10px 13px; font-size: 11px; }
+  .tb-export-lbl { display: none; }
+  .zoom-btn { width: 40px; height: 40px; font-size: 18px; }
+  #btn3d-quick { padding: 10px 14px; font-size: 11px; }
+  #btn-frenzy { padding: 8px 11px; }
+}
+
+/* Phones & small tablets (portrait): controls become a dock under the canvas.
+   Collapsed = handle + Regenerate / Show solution. Tap the handle to expand. */
+@media (max-width: 860px) and (min-height: 501px) {
+  #topbar { height: 52px; min-height: 52px; padding: 0 10px; }
+  .tb-sep, .tb-sep-v { margin: 0 8px; }
+  #mainrow { flex-direction: column; }
+  #wrap { order: 1; flex: 1 1 0; min-height: 0; }
+  #sidebar {
+    order: 2; width: 100% !important; max-width: none; min-width: 0;
+    flex: 0 0 auto; border-right: none; border-top: 1px solid var(--border);
+    border-radius: 18px 18px 0 0; z-index: 50;
+    box-shadow: 0 -10px 28px rgba(0,0,0,0.16);
+  }
+  #sb-resizer { display: none; }
+  #sb-header {
+    position: relative; padding: 18px 18px 10px; border-bottom: none;
+    cursor: pointer; user-select: none; border-radius: 18px 18px 0 0;
+  }
+  .sheet-grip {
+    display: block; position: absolute; top: 7px; left: 50%;
+    width: 38px; height: 4px; margin-left: -19px;
+    border-radius: 2px; background: var(--border2);
+  }
+  .brand-title { font-size: 15px; }
+  .brand-sub { display: none; }
+  #sheet-chev {
+    display: inline-flex; align-items: center; padding: 7px 12px;
+    border: 1px solid var(--border2); border-radius: 999px;
+    font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text2);
+    transition: color 0.15s, border-color 0.15s;
+  }
+  #sidebar.open #sheet-chev { color: var(--accent); border-color: var(--accent); }
+  #sidebar.open #sheet-chev::after { content: ''; }
+  #sb-scroll {
+    max-height: 0; overflow: hidden; padding-top: 0; padding-bottom: 0;
+    visibility: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    transition: max-height 0.3s ease, padding 0.3s ease, visibility 0s linear 0.3s;
+  }
+  #sidebar.open #sb-scroll {
+    max-height: 30dvh; overflow-y: auto; padding-top: 6px; padding-bottom: 18px;
+    visibility: visible; transition: max-height 0.3s ease, padding 0.3s ease, visibility 0s;
+  }
+  #sb-scroll, #sidebar.open #sb-scroll { padding-left: 18px; padding-right: 18px; }
+  #sb-bottom {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    padding: 10px 18px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--border);
+  }
+  #sb-bottom > #unsolvable-warning, #sb-bottom > #btn-force, #sb-bottom > .subtle { grid-column: 1 / -1; }
+  #zoom-ctrls { bottom: 36px; right: 10px; }
+  #zoom-ctrls .zoom-btn:nth-child(-n+2) { display: none; } /* pinch to zoom; keep the fit button */
+  /* status bar would overlay the (small) canvas on phones — hide it there */
+  #statusbar { display: none; }
+  #zoom-ctrls { bottom: 12px; }
+  #thumb-wrap { top: 10px; left: 10px; }
+  #solutionThumb { width: 96px; height: 96px; }
+  #thumb-ctrls button { width: 26px; height: 26px; font-size: 15px; }
+  #top-right-btns { top: 10px; right: 10px; }
+  .frenzy-modal-inner { padding: 24px 20px; }
+}
+
+/* Short landscape screens (phones on their side): keep the side panel, tighten it */
+@media (max-height: 500px) {
+  #topbar { height: 44px; min-height: 44px; }
+  #sidebar { width: 250px; min-width: 200px; }
+  #sb-header { padding: 10px 14px 8px; }
+  .brand-sub { display: none; }
+  #sb-scroll { padding: 12px 14px 16px; gap: 16px; }
+  #sb-bottom { padding: 10px 14px; gap: 6px; }
+  #solutionThumb { width: 96px; height: 96px; }
+  .sb-credits { display: none; }
+}
+
+/* Very narrow phones */
+@media (max-width: 420px) {
+  .tb-brand { display: none; }
+  #thumb-wrap { transform-origin: top left; }
+}
+
+.fc-section { font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text3);
+  border-bottom: 1px solid var(--border); padding: 8px 0 5px; margin-top: 4px; }
+.fc-section span { opacity: 0.7; letter-spacing: 0.06em; text-transform: none; margin-left: 4px; }
+.zoom-btn.active { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg2)); }
+#btn-viewlock { display: none; font-size: 13px; }
+body.mode3d #btn-viewlock { display: flex; }
+
+/* ── TOP BAR: dropdown on phones ── */
+#tb-menu { display: contents; }
+#tb-menu > * { flex-shrink: 0; }
+#tb-menu-btn, .btn-random.rand-mob { display: none; }
+@media (max-width: 860px), (max-height: 500px) and (pointer: coarse) {
+  #topbar { overflow: visible; position: relative; justify-content: space-between; }
+  .tb-brand { display: block; margin-right: 0; }
+  #tb-menu-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 14px; background: transparent; border: 1px solid var(--border2);
+    color: var(--text-bar); font-family: 'Roboto Mono', monospace; font-size: 11px;
+    letter-spacing: 0.08em; border-radius: var(--radius-sm); cursor: pointer;
+  }
+  #topbar.menu-open #tb-menu-btn { border-color: var(--accent); color: var(--accent); }
+  #tb-menu {
+    display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 300;
+    flex-direction: column; align-items: stretch; gap: 14px;
+    padding: 14px 16px 16px; background: var(--topbar-bg);
+    border-bottom: 1px solid var(--border); box-shadow: 0 12px 24px rgba(0,0,0,0.22);
+    max-height: calc(100dvh - 60px); overflow-y: auto;
+  }
+  #topbar.menu-open #tb-menu { display: flex; }
+  #tb-menu .tb-spacer, #tb-menu .tb-sep, #tb-menu .tb-sep-v { display: none; }
+  #tb-menu .tb-canvas-size { flex-wrap: wrap; gap: 8px; }
+  #tb-menu .tb-export-group { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+  #tb-menu .tb-export-group .tb-select { grid-column: 1 / -1; width: 100%; }
+  #tb-menu .tb-export-group .tb-btn { border-color: var(--border2); text-align: center; }
+  .btn-random.rand-desk { display: none; }
+  .btn-random.rand-mob { display: inline-flex; position: absolute; left: 50%; transform: translateX(-50%); }
+  .tb-brand { font-size: 13px; max-width: 28vw; overflow: hidden; text-overflow: ellipsis; }
+}
+
+/* ── RANDOMISE ── */
+.btn-random {
+  display: inline-flex; align-items: center; gap: 6px; font-weight: 500;
+  border: 1px solid var(--accent); color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.btn-random:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.btn-random .dice { display: inline-block; }
+.btn-random.spin .dice { animation: dice-roll 0.65s cubic-bezier(.2,.8,.3,1); }
+@keyframes dice-roll { 0% { transform: rotate(0) scale(1); } 50% { transform: rotate(400deg) scale(1.5); } 100% { transform: rotate(720deg) scale(1); } }
+</style>
+</head>
+<body>
+<noscript><p style="padding:24px;font-family:sans-serif">This tool needs JavaScript enabled.</p></noscript>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="tb-brand">LMNO Labyrinth</div>
+  <button class="tb-btn btn-random rand-mob" onclick="randomise()" aria-label="Randomise"><span class="dice">🎲</span> Randomise</button>
+  <button id="tb-menu-btn" aria-expanded="false" aria-controls="tb-menu">Menu ▾</button>
+  <div id="tb-menu">
+  <div class="tb-spacer"></div>
+  <div class="tb-canvas-size">
+    <span>W</span>
+    <input type="number" id="cw" value="900" min="200" max="4000" step="50" onchange="checkSizeWarn();redraw()">
+    <span>&times;</span>
+    <input type="number" id="ch" value="900" min="200" max="9999" step="50" onchange="checkSizeWarn();redraw()">
+    <span class="tb-dim-label">px</span>
+    <span id="size-warn">⚠ exceeds 4000px</span>
+    <div class="tb-sep-v"></div>
+    <button class="tb-canvas-tog active" id="tb-canvas-tog" onclick="toggleCanvasBorder()">Canvas On</button>
+  </div>
+  <div class="tb-spacer"></div>
+  <div class="tb-sep"></div>
+  <div class="tb-group tb-export-group">
+    <span class="tb-export-lbl">Export</span>
+    <button class="tb-btn btn-random rand-desk" onclick="randomise()" title="Surprise me: random maze, colours, 3D, orbit, frenzy…"><span class="dice">🎲</span> Randomise</button>
+    <select id="export-dpi" class="tb-select">
+      <option value="72">72 ppi</option>
+      <option value="150">150 ppi</option>
+      <option value="300" selected>300 ppi</option>
+    </select>
+    <button class="tb-btn" onclick="doExport('svg')">SVG</button>
+    <button class="tb-btn" onclick="doExport('png')">PNG</button>
+    <button class="tb-btn" onclick="doExport('jpg')">JPG</button>
+    <button class="tb-btn" id="btn-obj" onclick="exportOBJ()" title="Export 3D geometry as OBJ (3D mode only)">OBJ</button>
+  </div>
+  </div>
+</div>
+
+<!-- MAIN ROW -->
+<div id="mainrow">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div id="sb-header">
+      <div class="sheet-grip"></div>
+      <div class="brand-wrap">
+        <div class="brand-title">LMNO Labyrinth Generator</div>
+      </div>
+      <span id="sheet-chev" aria-hidden="true">Controls ▴</span>
+    </div>
+    <div id="sb-scroll">
+
+      <!-- SHAPE -->
+      <div class="group">
+        <div class="group-title">Shape</div>
+        <div class="ctrl">
+          <div class="row"><div class="lbl">Number of rings</div>
+            <div class="ri"><input type="range" id="rings" min="1" max="24" value="12" step="1"><span class="val" id="rings-v">12</span></div></div>
+          <div class="row"><div class="lbl">Ring spacing</div>
+            <div class="ri"><input type="range" id="spacing" min="1" max="100" value="20" step="1"><span class="val" id="spacing-v">20</span></div></div>
+          <div class="row"><div class="lbl">Path openness (links)</div>
+            <div class="ri"><input type="range" id="linkpct" min="0" max="30" value="0" step="1"><span class="val" id="linkpct-v">0%</span></div></div>
+
+          <div class="row">
+            <div class="lbl">Difficulty preset</div>
+            <div class="diff-row">
+              <button class="diff-btn" id="diff-easy"   onclick="applyDifficulty('easy')">Easy</button>
+              <button class="diff-btn" id="diff-medium" onclick="applyDifficulty('medium')">Medium</button>
+              <button class="diff-btn" id="diff-hard"   onclick="applyDifficulty('hard')">Hard</button>
+            </div>
+          </div>
+
+          <details class="adv">
+            <summary>Fine-tune shape</summary>
+            <div class="ctrl">
+              <div class="row"><div class="lbl">Logo scale (%)</div>
+                <div class="ri"><input type="range" id="logoscale" min="20" max="130" value="70" step="2"><span class="val" id="logoscale-v">70%</span></div></div>
+              <div class="row"><div class="lbl">Proximity to LMNO boundary</div>
+                <div class="ri"><input type="range" id="proximity" min="-60" max="30" value="0" step="1"><span class="val" id="proximity-v">0</span></div></div>
+              <div class="row"><div class="lbl">Gaps per ring</div>
+                <div class="ri"><input type="range" id="gaps" min="1" max="8" value="2" step="1"><span class="val" id="gaps-v">2</span></div></div>
+              <div class="row"><div class="lbl">Gap size (°)</div>
+                <div class="ri"><input type="range" id="gapsize" min="3" max="40" value="14" step="1"><span class="val" id="gapsize-v">14°</span></div></div>
+              <div class="row"><div class="lbl">Ring rotation offset (°)</div>
+                <div class="ri"><input type="range" id="gapoffset" min="0" max="120" value="40" step="1"><span class="val" id="gapoffset-v">40°</span></div></div>
+              <div class="row"><div class="lbl">Gap jitter</div>
+                <div class="ri"><input type="range" id="jitter" min="0" max="40" value="10" step="1"><span class="val" id="jitter-v">10</span></div></div>
+              <div class="row"><div class="lbl">Min gap between links (°)</div>
+                <div class="ri"><input type="range" id="linkgap" min="10" max="90" value="40" step="5"><span class="val" id="linkgap-v">40°</span></div></div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- STYLE -->
+      <div class="group">
+        <div class="group-title">Style</div>
+        <div class="ctrl">
+          <div class="row"><div class="lbl">Theme</div>
+            <select id="theme" onchange="applyTheme();redraw()">
+              <option value="dark">Dark</option>
+              <option value="light" selected>Light</option>
+              <option value="red">Red</option>
+            </select></div>
+          <div class="row"><div class="lbl">Line weight</div>
+            <div class="ri"><input type="range" id="lw" min="0.5" max="5" value="1.5" step="0.5"><span class="val" id="lw-v">1.5</span></div></div>
+          <div class="trow"><span>Show LMNO</span>
+            <div class="tog on" id="showLetters" onclick="this.classList.toggle('on');redraw()"></div></div>
+          <div class="trow"><span>Show LMNO boundary</span>
+            <div class="tog on" id="showArcs" onclick="this.classList.toggle('on');redraw()"></div></div>
+          <div class="row"><div class="lbl">LMNO colour (2D)</div>
+            <div class="color-swatches">
+              <button class="swatch swatch-white" id="sw-white" onclick="setLogoColor('white')">W</button>
+              <button class="swatch swatch-black active" id="sw-black" onclick="setLogoColor('black')">B</button>
+              <button class="swatch swatch-red" id="sw-red" onclick="setLogoColor('red')">R</button>
+            </div></div>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- 3D & MOTION -->
+      <div class="group">
+        <div class="group-title">3D &amp; Motion</div>
+        <div class="ctrl">
+          <div class="trow"><span>Enable 3D</span>
+            <div class="tog t3d" id="toggle3d" onclick="toggle3D()"></div></div>
+
+          <div id="panel3d" style="display:none;flex-direction:column;gap:12px;">
+            <div class="row"><div class="lbl">Rotate X — Tilt (°)</div>
+              <div class="ri"><input type="range" id="rotX" min="-180" max="180" value="-28.4" step="0.1"><span class="val" id="rotX-v">-28.4°</span></div></div>
+            <div class="row"><div class="lbl">Rotate Y — Turn (°)</div>
+              <div class="ri"><input type="range" id="rotY" min="-180" max="180" value="-6.3" step="0.1"><span class="val" id="rotY-v">-6.3°</span></div></div>
+            <div class="row"><div class="lbl">Rotate Z — Roll (°)</div>
+              <div class="ri"><input type="range" id="rotZ" min="-180" max="180" value="-11.5" step="0.1"><span class="val" id="rotZ-v">-11.5°</span></div></div>
+            <div class="row"><div class="lbl">Perspective (°)</div>
+              <div class="ri"><input type="range" id="perspective" min="0" max="160" value="0" step="1"><span class="val" id="perspective-v">0°</span></div></div>
+
+            <div class="sec" style="margin-top:4px;">Build it up</div>
+            <div class="row"><div class="lbl">Line thickness</div>
+              <div class="ri"><input type="range" id="thickness" min="1" max="100" value="1" step="1"><span class="val" id="thickness-v">1</span></div></div>
+            <div class="row"><div class="lbl">Height (extrusion)</div>
+              <div class="ri"><input type="range" id="extDepth" min="0" max="200" value="0" step="1"><span class="val" id="extDepth-v">0</span></div></div>
+
+            <details class="adv">
+              <summary>Advanced 3D</summary>
+              <div class="ctrl">
+                <div class="row"><div class="lbl">Lens effect</div>
+                  <select id="lensEffect" onchange="applyLensEffect(this.value)">
+                    <option value="none">None</option>
+                    <option value="one-point">One-Point</option>
+                    <option value="two-point">Two-Point</option>
+                    <option value="three-point">Three-Point</option>
+                    <option value="isometric">Isometric</option>
+                    <option value="birds-eye">Bird's-Eye</option>
+                    <option value="worms-eye">Worm's-Eye</option>
+                    <option value="wide-angle">Wide Angle</option>
+                    <option value="telephoto">Telephoto</option>
+                    <option value="fisheye">Fisheye</option>
+                    <option value="macro">Macro</option>
+                    <option value="tilt-shift">Tilt-Shift</option>
+                    <option value="warped">Warped</option>
+                    <option value="glitch">Glitch</option>
+                  </select></div>
+
+                <div class="row"><div class="lbl" style="font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);padding-bottom:6px;">Colours</div></div>
+                <div class="fc-section">Labyrinth geometry <span>rings &amp; links</span></div>
+                <div class="face-colour-row" id="fcr-top"    data-face="TOP_CAP"    data-hex="#C0201E" onclick="openFacePopover('top')">
+                  <div class="fc-swatch" id="fcs-top"    style="background:#C0201E"></div><span class="fc-label" id="fcl-top">Top Cap</span></div>
+                <div class="face-colour-row" id="fcr-bot"    data-face="BOT_CAP"    data-hex="#0A0A0A" onclick="openFacePopover('bot')">
+                  <div class="fc-swatch" id="fcs-bot"    style="background:#0A0A0A"></div><span class="fc-label" id="fcl-bot">Bottom Cap</span></div>
+                <div class="face-colour-row" id="fcr-outer"  data-face="OUTER_WALL" data-hex="#888888" onclick="openFacePopover('outer')">
+                  <div class="fc-swatch" id="fcs-outer"  style="background:#888888"></div><span class="fc-label" id="fcl-outer">Inner Wall</span></div>
+                <div class="face-colour-row" id="fcr-inner"  data-face="INNER_WALL" data-hex="#888888" onclick="openFacePopover('inner')">
+                  <div class="fc-swatch" id="fcs-inner"  style="background:#888888"></div><span class="fc-label" id="fcl-inner">Outer Wall</span></div>
+                <div class="face-colour-row" id="fcr-ruling" data-face="RULING_FACE" data-hex="#888888" onclick="openFacePopover('ruling')">
+                  <div class="fc-swatch" id="fcs-ruling" style="background:#888888"></div><span class="fc-label" id="fcl-ruling">End &amp; Join</span></div>
+                <div class="fc-section">LMNO logo geometry <span>letters &amp; boundary</span></div>
+                  <div class="face-colour-row" id="fcr-lmno-top" data-face="LMNO_TOP" data-hex="#C0201E" onclick="openFacePopover('lmno-top')">
+                    <div class="fc-swatch" id="fcs-lmno-top" style="background:#C0201E"></div><span class="fc-label">Top Cap</span></div>
+                  <div class="face-colour-row" id="fcr-lmno-bot" data-face="LMNO_BOT" data-hex="#0A0A0A" onclick="openFacePopover('lmno-bot')">
+                    <div class="fc-swatch" id="fcs-lmno-bot" style="background:#0A0A0A"></div><span class="fc-label">Bottom Cap</span></div>
+                  <div class="face-colour-row" id="fcr-lmno-outer" data-face="LMNO_OUTER" data-hex="#888888" onclick="openFacePopover('lmno-outer')">
+                    <div class="fc-swatch" id="fcs-lmno-outer" style="background:#888888"></div><span class="fc-label">Inner Wall</span></div>
+                  <div class="face-colour-row" id="fcr-lmno-inner" data-face="LMNO_INNER" data-hex="#888888" onclick="openFacePopover('lmno-inner')">
+                    <div class="fc-swatch" id="fcs-lmno-inner" style="background:#888888"></div><span class="fc-label">Outer Wall</span></div>
+                  <div class="face-colour-row" id="fcr-lmno-ruling" data-face="LMNO_RULING" data-hex="#888888" onclick="openFacePopover('lmno-ruling')">
+                    <div class="fc-swatch" id="fcs-lmno-ruling" style="background:#888888"></div><span class="fc-label">End &amp; Join</span></div>
+                <div id="fc-popover" style="display:none;"></div>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+                  <button class="sb-btn" style="flex:1;font-size:8.5px;letter-spacing:0.08em;opacity:0.75;" onclick="reset3DDefaults()">&#8635; Reset 3D to defaults</button>
+                  <button style="width:20px;height:20px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:9px;cursor:pointer;flex-shrink:0;"
+                    title="Reset 3D to Defaults returns to the bare 3D path: thinnest line, no height, default tilt, default face colours."
+                    onclick="alert('Reset 3D to Defaults returns to the bare 3D path: thinnest line, no height, default tilt and face colours. Add thickness and height again with the sliders.')">?</button>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <details class="adv">
+            <summary>Ring orbit (animation)</summary>
+            <div class="ctrl">
+              <div class="trow"><span>⏸ Paused</span>
+                <div class="tog" id="toggleOrbit" onclick="toggleRingOrbit()"></div></div>
+              <div class="row" id="orbitSpeedRow">
+                <div class="lbl">Orbit speed</div>
+                <div class="ri"><input type="range" id="orbitSpeed" min="0" max="100" value="30" step="1"><span class="val" id="orbitSpeed-v">30</span></div>
+              </div>
+              <div class="row" id="orbitEccenRow">
+                <div class="lbl">Eccentricity</div>
+                <div class="ri"><input type="range" id="orbitEccen" min="0" max="0.95" step="0.01" value="0.55"><span class="val" id="orbitEccen-v">0.55</span></div></div>
+              <div class="row" id="orbitSpreadRow">
+                <div class="lbl">Orbit spread</div>
+                <div class="ri"><input type="range" id="orbitSpread" min="0" max="60" value="20" step="1"><span class="val" id="orbitSpread-v">20</span></div></div>
+              <div class="row" id="orbitCamXRow">
+                <div class="lbl">Cam tilt X (°)</div>
+                <div class="ri"><input type="range" id="orbitCamX" min="-90" max="90" value="22" step="1"><span class="val" id="orbitCamX-v">22°</span></div></div>
+              <div class="row" id="orbitCamSpdRow">
+                <div class="lbl">Cam spin speed</div>
+                <div class="ri"><input type="range" id="orbitCamSpd" min="0" max="40" value="8" step="1"><span class="val" id="orbitCamSpd-v">8</span></div></div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- ADVANCED / SEED -->
+      <details class="adv">
+        <summary>Advanced</summary>
+        <div class="ctrl">
+          <div class="row"><div class="lbl">Seed</div>
+            <div class="ri"><input type="range" id="seed" min="1" max="999" value="137" step="1"><span class="val" id="seed-v">137</span></div></div>
+        </div>
+      </details>
+
+    </div><!-- /sb-scroll -->
+
+    <div id="sb-bottom">
+      <button class="sb-btn pri" onclick="setSlider('seed',Math.floor(Math.random()*999)+1);redraw()">↻ Regenerate</button>
+      <button class="sb-btn" id="btn-solve" onclick="toggleSolve()">◎ Show solution</button>
+      <div id="unsolvable-warning" style="display:none;padding:9px 11px;background:rgba(195,32,38,0.08);border:1px solid rgba(195,32,38,0.25);border-radius:var(--radius-sm);font-size:8.5px;line-height:1.65;color:#c06060;letter-spacing:0.02em;">
+        This maze has no solution with current settings. Try increasing gaps or reducing links, or use Force Solution below.
+      </div>
+      <button class="sb-btn" id="btn-force" onclick="forceSolution()" style="display:none;font-size:9.5px;letter-spacing:0.06em;">⚡ Force a solution</button>
+      <button class="sb-btn subtle" onclick="resetAllDefaults()">⟳ Reset all to defaults</button>
+    </div>
+    <div id="sb-resizer"></div>
+  </div><!-- /sidebar -->
+
+  <!-- CANVAS WRAP -->
+  <div id="wrap">
+    <canvas id="mainCanvas"></canvas>
+    <canvas id="threeCanvas"></canvas>
+    <div id="thumb-wrap">
+      <canvas id="solutionThumb" width="200" height="200"></canvas>
+      <div id="thumb-ctrls">
+        <button onclick="thumbZoom(1.25)" title="Zoom in">+</button>
+        <button onclick="thumbZoom(0.8)"  title="Zoom out">−</button>
+        <button onclick="thumbFit()"      title="Fit" style="font-size:9px">⊡</button>
+        <button onclick="thumbDownload()" title="Download JPG" style="font-size:9px">↓</button>
+        <span style="flex:1"></span>
+        <button onclick="thumbClose()" title="Close" style="font-size:8px;letter-spacing:0.05em;opacity:0.7;">✕</button>
+      </div>
+    </div>
+
+    <div id="top-right-btns">
+      <button id="btn-frenzy" onclick="toggleFrenzy()"><span class="frenzy-dot"></span><span class="frenzy-label"> FRENZY</span></button>
+      <button id="btn3d-quick" onclick="toggle3D()"><span class="dot"></span> 3D</button>
+    </div>
+
+    <div id="zoom-ctrls">
+      <button class="zoom-btn" onclick="viewZoomIn()">+</button>
+      <button class="zoom-btn" onclick="viewZoomOut()">−</button>
+      <button class="zoom-btn" onclick="viewReset()" style="font-size:11px" title="Fit to view">⊡</button>
+      <button class="zoom-btn" id="btn-viewlock" onclick="toggleViewLock()" title="Lock to the LMNO logo's default 3D view">🔓</button>
+    </div>
+
+    <div id="statusbar">
+      <span id="st-rings">— rings</span>
+      <span id="st-gaps">—</span>
+      <span id="st-links">—</span>
+      <span id="st-seed">seed —</span>
+      <span id="st-3d"></span>
+      <span class="sb-credits">Designed by <a href="https://hanit.in" target="_blank">Hanit</a> &nbsp;&middot;&nbsp; <a href="https://l-m-n-o.com" target="_blank">Living Midnight Narrative Outfits &mdash; l-m-n-o.com</a></span>
+      <span id="zoom-info">100%</span>
+    </div>
+  </div>
+
+</div><!-- /mainrow -->
+
+<!-- FRENZY MODAL -->
+<div id="frenzy-modal">
+  <div class="frenzy-modal-inner">
+    <div class="frenzy-modal-title">⚡ INITIALISING FRENZY PROTOCOL</div>
+    <p class="frenzy-modal-body">
+      You are about to breach the operational limits of this system.<br><br>
+      Frenzy Mode unleashes raw, unrestricted control — sliders become input fields,
+      value ceilings dissolve, and the renderer will attempt to process
+      <em>whatever you throw at it.</em><br><br>
+      Expect instability. Expect the unexpected. Expect your browser to file a complaint.<br><br>
+      <span style="color:#ff4444;letter-spacing:0.1em;">PROCEED AT YOUR OWN RISK. THIS APP MAY BREAK.</span>
+    </p>
+    <div class="frenzy-modal-btns">
+      <button class="frenzy-confirm" onclick="enableFrenzy()">⚡ Engage Frenzy</button>
+      <button class="frenzy-cancel" onclick="document.getElementById('frenzy-modal').classList.remove('show')">Abort Mission</button>
+    </div>
+  </div>
+</div>
+
+<!-- 3D SVG MODAL -->
+<div id="svg3dModal">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:28px 32px;max-width:380px;width:90%;font-family:'Roboto Mono',monospace;">
+    <div style="font-family:'Zilla Slab',serif;font-size:16px;color:var(--text);margin-bottom:12px;">SVG Export in 3D Mode</div>
+    <p style="font-size:10px;color:var(--text2);line-height:1.7;margin-bottom:16px;">3D view is rendered via WebGL and cannot be directly exported as SVG.<br><br>To export vectors, disable 3D mode first. To export the current 3D view, use PNG or JPG.</p>
+    <div style="display:flex;gap:8px;">
+      <button onclick="document.getElementById('svg3dModal').style.display='none';doExport('png');" style="flex:1;padding:9px;background:var(--pri-bg);color:var(--pri-text);border:none;border-radius:var(--radius-sm);font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;">Export PNG Instead</button>
+      <button onclick="document.getElementById('svg3dModal').style.display='none';" style="flex:1;padding:9px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════
+const VB_W=260.24, VB_H=301.04;
+const ELL_CX_L=130.12, ELL_CY_L=143.02;
+const ELL_RX_L=157.76, ELL_RY_L=90.76;
+const ELL_ROT_DEG=-45;
+const D2R=Math.PI/180;
+
+const ARC_SVG_PATHS=[
+  "M65.95,78.85c37.03-37.03,80.23-59.46,116.5-63.77",
+  "M144.7,246.24c-49.41,29.69-99.74,34.69-126.12,8.31-22.34-22.34-22.17-61.87-3.55-103.47",
+  "M254.53,51.96c13.12,36.05-4.33,91.01-45.43,139.2"
+];
+const LETTERS=[
+  {type:'poly',pts:[[5.69,59.58],[48.68,133.93],[100.27,92.46]]},
+  {type:'poly',pts:[[109.14,131.16],[235.5,0.99],[174.51,122.11],[239.87,73.49],[188.28,175.91]]},
+  {type:'poly',pts:[[187.45,300.41],[131.38,186.81],[198.07,222.52],[149.52,136.93]]},
+  {type:'ellipse',cx:67.29,cy:193.24,rx:45.3,ry:30.05,rot:-45.01},
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════════════════════════════════════
+function applyTheme(){
+  const t=document.getElementById('theme').value;
+  document.body.className=(t==='light'?'theme-light':t==='red'?'theme-red':'')+(window._frenzyMode?' frenzy-mode':'')+(document.getElementById('toggle3d').classList.contains('on')?' mode3d':'');
+}
+const LOGO_COLOURS={white:'#e8e8e8',black:'#1a1a1a',red:'#c32026'};
+function getDrawTheme(k){
+  if(k==='light') return {bg:'#ffffff',line:'#1a1a1a'};
+  if(k==='red')   return {bg:'#0c0c0c',line:'#c32026'};
+  return                 {bg:'#0c0c0c',line:'#d8d8d8'};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MATH
+// ═══════════════════════════════════════════════════════════════════════════
+function seededRng(seed){
+  let s=seed>>>0;
+  return ()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};
+}
+
+function ellPt(cx,cy,rx,ry,ellRotDeg,tDeg){
+  const er=ellRotDeg*D2R, t=tDeg*D2R;
+  const x=cx+rx*Math.cos(t)*Math.cos(er)-ry*Math.sin(t)*Math.sin(er);
+  const y=cy+rx*Math.cos(t)*Math.sin(er)+ry*Math.sin(t)*Math.cos(er);
+  return [x,y];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 3D ORBIT MATH — ported from ellipse-orbit geometry
+// Rings distributed across tilted orbital planes, perspective-projected
+// ═══════════════════════════════════════════════════════════════════════════
+function o3dRotY(x,y,z,a){const c=Math.cos(a),s=Math.sin(a);return{x:x*c+z*s,y,z:-x*s+z*c};}
+function o3dRotX(x,y,z,a){const c=Math.cos(a),s=Math.sin(a);return{x,y:y*c-z*s,z:y*s+z*c};}
+function o3dProject(px,py,pz,camTiltX,camAzim){
+  // Camera: Y-rotation (azimuth) then X-rotation (tilt), then perspective divide
+  let p=o3dRotY(px,py,pz,camAzim*D2R);
+  p=o3dRotX(p.x,p.y,p.z,camTiltX*D2R);
+  const fov=700, scale=fov/(fov+p.z+300);
+  return{sx:p.x*scale, sy:p.y*scale, depth:p.z};
+}
+// 3D point on ring ringIdx (of totalN) at parametric angle u (radians).
+// Rings are spread across orbital planes via inclination (X-tilt) and longitude (Z-rotation).
+function orbitRingPt3D(ringIdx,totalN,a,b,u){
+  const N=Math.max(1,totalN);
+  const inc=ringIdx*(Math.PI/N);           // inclination: spread across planes
+  const lon=ringIdx*(2*Math.PI/N);         // longitude: rotate each plane
+  // Local orbital ellipse
+  const lx=a*Math.cos(u), ly=b*Math.sin(u);
+  // Rotate by inclination around X axis
+  const ci=Math.cos(inc), si=Math.sin(inc);
+  const rx=lx, ry=ly*ci, rz=ly*si;
+  // Rotate by longitude around Z axis
+  const cl=Math.cos(lon), sl=Math.sin(lon);
+  return{x:rx*cl-ry*sl, y:rx*sl+ry*cl, z:rz};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LOGO COLLISION SEGMENTS
+// ═══════════════════════════════════════════════════════════════════════════
+function buildLogoSegs(ls,logtx,logty){
+  const segs=[];
+  for(const el of LETTERS){
+    if(el.type==='poly'){
+      for(let i=0;i<el.pts.length-1;i++)
+        segs.push([[el.pts[i][0]*ls+logtx,el.pts[i][1]*ls+logty],
+                   [el.pts[i+1][0]*ls+logtx,el.pts[i+1][1]*ls+logty]]);
+    } else {
+      const rot=el.rot*D2R; let prev=null;
+      for(let i=0;i<=72;i++){
+        const t=(i/72)*2*Math.PI;
+        const x=(el.cx+el.rx*Math.cos(t)*Math.cos(rot)-el.ry*Math.sin(t)*Math.sin(rot))*ls+logtx;
+        const y=(el.cy+el.rx*Math.cos(t)*Math.sin(rot)+el.ry*Math.sin(t)*Math.cos(rot))*ls+logty;
+        if(prev) segs.push([prev,[x,y]]);
+        prev=[x,y];
+      }
+    }
+  }
+  return segs;
+}
+
+function ptSegDist(px,py,ax,ay,bx,by){
+  const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;
+  if(l2===0) return Math.hypot(px-ax,py-ay);
+  const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l2));
+  return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));
+}
+
+function computeProtectedRanges(cx,cy,rx,ry,canvasSegs,basePad,proximity){
+  const effectivePad=Math.max(-999,basePad-proximity);
+  if(effectivePad<=0) return [];
+  const N=1440,hit=new Uint8Array(N);
+  for(let i=0;i<N;i++){
+    const t=(i/N)*360*D2R,er=ELL_ROT_DEG*D2R;
+    const px=cx+rx*Math.cos(t)*Math.cos(er)-ry*Math.sin(t)*Math.sin(er);
+    const py=cy+rx*Math.cos(t)*Math.sin(er)+ry*Math.sin(t)*Math.cos(er);
+    for(const[[ax,ay],[bx,by]] of canvasSegs)
+      if(ptSegDist(px,py,ax,ay,bx,by)<effectivePad){hit[i]=1;break;}
+  }
+  const P=3,padded=new Uint8Array(N);
+  for(let i=0;i<N;i++) if(hit[i]) for(let d=-P;d<=P;d++) padded[(i+d+N)%N]=1;
+  const ranges=[];let inRun=false,rs=0;
+  for(let i=0;i<N;i++){
+    if(padded[i]&&!inRun){inRun=true;rs=i;}
+    else if(!padded[i]&&inRun){ranges.push([(rs/N)*360,(i/N)*360]);inRun=false;}
+  }
+  if(inRun) ranges.push([(rs/N)*360,360]);
+  return ranges;
+}
+
+function cutRing(gapRanges){
+  let flat=[];
+  for(const[s,e] of gapRanges){
+    const ns=((s%360)+360)%360,ne=((e%360)+360)%360;
+    if(ns<ne) flat.push([ns,ne]);
+    else if(ne<ns){flat.push([ns,360]);flat.push([0,ne]);}
+  }
+  flat.sort((a,b)=>a[0]-b[0]);
+  const merged=[];
+  for(const[s,e] of flat){
+    if(merged.length&&s<=merged[merged.length-1][1])
+      merged[merged.length-1][1]=Math.max(merged[merged.length-1][1],e);
+    else merged.push([s,e]);
+  }
+  const segs=[];let pos=0;
+  for(const[s,e] of merged){if(pos<s-0.2)segs.push([pos,s]);pos=e;}
+  if(pos<359.8) segs.push([pos,360]);
+  return segs;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GEOMETRY BUILD
+// ═══════════════════════════════════════════════════════════════════════════
+function buildGeometry(p){
+  const W=p.cw,H=p.ch,cx=W/2,cy=H/2;
+  const ls=(p.logoscale/100)*(Math.min(W,H)/Math.max(VB_W,VB_H));
+  const baseRX=ELL_RX_L*ls,baseRY=ELL_RY_L*ls;
+  const logtx=cx-ELL_CX_L*ls,logty=cy-ELL_CY_L*ls;
+  const rng=seededRng(p.seedVal);
+  const canvasSegs=buildLogoSegs(ls,logtx,logty);
+  const basePad=(2.83*ls)/2+p.lw+4;
+
+  let cumOffset=rng()*360;
+  const ringGapsMap={};
+  const ringData=[];
+
+  for(let i=0;i<p.rings;i++){
+    const rx=baseRX+(i+1)*p.spacing,ry=baseRY+(i+1)*p.spacing;
+    const gapRanges=[];
+    for(let g=0;g<p.gaps;g++){
+      const base=cumOffset+(g/p.gaps)*360;
+      const j=(rng()-0.5)*p.jitter*2;
+      const centre=((base+j)%360+360)%360;
+      gapRanges.push([centre-p.gapSize/2,centre+p.gapSize/2]);
+    }
+    cumOffset+=p.gapOffset+(rng()-0.5)*p.jitter;
+    const protected_=computeProtectedRanges(cx,cy,rx,ry,canvasSegs,basePad,p.proximity);
+    const allGaps=[...gapRanges,...protected_];
+    ringGapsMap[i]=allGaps;
+    ringData.push({rx,ry,allGaps,segs:cutRing(allGaps)});
+  }
+
+  // Links
+  const linkList=[];
+  if(p.linkPct>0){
+    const maxLinks=Math.round(p.rings*p.linkPct/3);
+    let tries=0;
+    while(linkList.length<maxLinks&&tries<maxLinks*30){
+      tries++;
+      const ri=Math.floor(rng()*p.rings);
+      if(ri>=p.rings-1) continue;
+      const angle=rng()*360;
+      const tooClose=linkList.some(q=>q.ring===ri&&Math.abs(((angle-q.angle+540)%360)-180)<p.linkGapDeg);
+      if(tooClose) continue;
+      const inGap=(ringGapsMap[ri]||[]).some(([s,e])=>{
+        const ns=((s%360)+360)%360,ne=((e%360)+360)%360;
+        if(ns<ne) return angle>=ns&&angle<=ne;
+        return angle>=ns||angle<=ne;
+      });
+      if(inGap) continue;
+      if(p.proximity>=0){
+        const[x1,y1]=ellPt(cx,cy,ringData[ri].rx,ringData[ri].ry,ELL_ROT_DEG,angle);
+        const[x2,y2]=ellPt(cx,cy,ringData[ri+1].rx,ringData[ri+1].ry,ELL_ROT_DEG,angle);
+        let clear=true;
+        for(const[[ax,ay],[bx,by]] of canvasSegs)
+          if(ptSegDist((x1+x2)/2,(y1+y2)/2,ax,ay,bx,by)<basePad*1.5){clear=false;break;}
+        if(!clear) continue;
+      }
+      linkList.push({ring:ri,angle});
+    }
+  }
+
+  // ── Letter blocked angle ranges per corridor ────────────────────────────
+  const letterBlockedByZone = {};
+  const scanN = 720;
+  const er = ELL_ROT_DEG * D2R;
+  const letterPad = basePad + 1;
+
+  for(let zone = 1; zone < p.rings; zone++){
+    const innerR = ringData[zone-1], outerR = ringData[zone];
+    const mrx = (innerR.rx + outerR.rx) / 2;
+    const mry = (innerR.ry + outerR.ry) / 2;
+
+    const hit = new Uint8Array(scanN);
+    for(let i = 0; i < scanN; i++){
+      const t = (i / scanN) * 2 * Math.PI;
+      const px = cx + mrx*Math.cos(t)*Math.cos(er) - mry*Math.sin(t)*Math.sin(er);
+      const py = cy + mrx*Math.cos(t)*Math.sin(er) + mry*Math.sin(t)*Math.cos(er);
+      for(const [[ax,ay],[bx,by]] of canvasSegs)
+        if(ptSegDist(px,py,ax,ay,bx,by) < letterPad){ hit[i]=1; break; }
+    }
+    const P = 2, padded = new Uint8Array(scanN);
+    for(let i = 0; i < scanN; i++) if(hit[i]) for(let d=-P;d<=P;d++) padded[(i+d+scanN)%scanN]=1;
+
+    const ranges = [];
+    let inRun = false, rs = 0;
+    for(let i = 0; i < scanN; i++){
+      if(padded[i] && !inRun){ inRun=true; rs=i; }
+      else if(!padded[i] && inRun){ ranges.push([(rs/scanN)*360,(i/scanN)*360]); inRun=false; }
+    }
+    if(inRun) ranges.push([(rs/scanN)*360, 360]);
+    if(ranges.length) letterBlockedByZone[zone] = ranges;
+  }
+
+  return{ringData,linkList,canvasSegs,ls,logtx,logty,W,H,cx,cy,baseRX,baseRY,letterBlockedByZone};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SVG PATH SAMPLER (for 2D draw and arc paths)
+// ═══════════════════════════════════════════════════════════════════════════
+let _pe=null;
+function sampleSVGPath(d,steps=48){
+  if(!_pe){_pe=document.createElementNS('http://www.w3.org/2000/svg','path');}
+  _pe.setAttribute('d',d);
+  const len=_pe.getTotalLength(),pts=[];
+  for(let i=0;i<=steps;i++){const q=_pe.getPointAtLength((i/steps)*len);pts.push([q.x,q.y]);}
+  return pts;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SVG PATH PARSER — for Three.js ribbon geometry
+// Parses M/C/Z commands into cubic bezier segments, returns polyline pts
+// ═══════════════════════════════════════════════════════════════════════════
+function parseSVGPathToCubics(d){
+  // Returns array of {p0,p1,p2,p3} cubic bezier segments
+  const segs=[];
+  // tokenise: split on commands and commas/spaces
+  const tokens=d.match(/[MCZmcz]|[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?/g)||[];
+  let i=0, cx=0,cy=0, startX=0,startY=0;
+  function num(){return parseFloat(tokens[i++]);}
+  while(i<tokens.length){
+    const cmd=tokens[i++];
+    if(cmd==='M'||cmd==='m'){
+      const abs=(cmd==='M');
+      cx=abs?num():cx+num(); cy=abs?num():cy+num();
+      startX=cx; startY=cy;
+    } else if(cmd==='C'||cmd==='c'){
+      const abs=(cmd==='C');
+      while(i<tokens.length && /[-+0-9.]/.test(tokens[i])){
+        const x1=abs?num():cx+num(), y1=abs?num():cy+num();
+        const x2=abs?num():cx+num(), y2=abs?num():cy+num();
+        const x=abs?num():cx+num(),  y=abs?num():cy+num();
+        segs.push({p0:[cx,cy],p1:[x1,y1],p2:[x2,y2],p3:[x,y]});
+        cx=x; cy=y;
+      }
+    } else if(cmd==='Z'||cmd==='z'){
+      if(cx!==startX||cy!==startY){
+        // straight line back to start — represent as degenerate cubic
+        const mx=(cx+startX)/2, my=(cy+startY)/2;
+        segs.push({p0:[cx,cy],p1:[mx,my],p2:[mx,my],p3:[startX,startY]});
+      }
+      cx=startX; cy=startY;
+    }
+  }
+  return segs;
+}
+
+function cubicToPolyline(p0,p1,p2,p3,steps=20){
+  // De Casteljau at t=0,1/steps,...,1
+  const pts=[];
+  for(let s=0;s<=steps;s++){
+    const t=s/steps;
+    const mt=1-t;
+    const x=mt*mt*mt*p0[0]+3*mt*mt*t*p1[0]+3*mt*t*t*p2[0]+t*t*t*p3[0];
+    const y=mt*mt*mt*p0[1]+3*mt*mt*t*p1[1]+3*mt*t*t*p2[1]+t*t*t*p3[1];
+    pts.push([x,y]);
+  }
+  return pts;
+}
+
+function svgPathToPolyline(d){
+  const cubics=parseSVGPathToCubics(d);
+  if(!cubics.length) return {pts:[],breakIndices:new Set()};
+  // Each cubic is subdivided into 20 segments (21 points, steps=20).
+  // Chain the cubics — skip the duplicate start point of each after the first.
+  // Track boundary indices using the spec pattern: idx += subdivisionsPerSegment.
+  const STEPS=20; // subdivisions per bezier segment
+  const pts=[];
+  const boundaryIndices=new Set();
+  let idx=0;
+  for(let ci=0;ci<cubics.length;ci++){
+    const{p0,p1,p2,p3}=cubics[ci];
+    const segPts=cubicToPolyline(p0,p1,p2,p3,STEPS);
+    boundaryIndices.add(idx); // start of this segment is a boundary
+    if(ci===0){
+      pts.push(...segPts);
+      idx+=STEPS; // 20 intervals → advance by 20
+    } else {
+      pts.push(...segPts.slice(1)); // skip duplicate shared point
+      idx+=STEPS;
+    }
+  }
+  boundaryIndices.add(idx); // final point
+  return {pts,breakIndices:boundaryIndices};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NORMAL COMPUTATION — standalone function, called once per path
+// ═══════════════════════════════════════════════════════════════════════════
+function computeNormals(points) {
+  const n = points.length;
+  const normals = [];
+
+  for (let i = 0; i < n; i++) {
+    let dx, dy;
+
+    if (i === 0) {
+      dx = points[1].x - points[0].x;
+      dy = points[1].y - points[0].y;
+    } else if (i === n - 1) {
+      dx = points[n-1].x - points[n-2].x;
+      dy = points[n-1].y - points[n-2].y;
+    } else {
+      const inDx = points[i].x - points[i-1].x;
+      const inDy = points[i].y - points[i-1].y;
+      const inLen = Math.sqrt(inDx*inDx + inDy*inDy) || 1;
+
+      const outDx = points[i+1].x - points[i].x;
+      const outDy = points[i+1].y - points[i].y;
+      const outLen = Math.sqrt(outDx*outDx + outDy*outDy) || 1;
+
+      dx = (inDx/inLen) + (outDx/outLen);
+      dy = (inDy/inLen) + (outDy/outLen);
+    }
+
+    const len = Math.sqrt(dx*dx + dy*dy);
+    if (len < 0.0001) {
+      // degenerate segment — copy previous normal or use a default
+      if (normals.length > 0) {
+        normals.push({ ...normals[normals.length - 1] });
+      } else {
+        normals.push({ x: 0, y: 1 }); // fallback default
+      }
+      continue;
+    }
+    normals.push({ x: -dy/len, y: dx/len });
+  }
+
+  return normals;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RIBBON GEOMETRY BUILDER (Three.js)
+// Takes an array of [x,y] centreline points and returns typed arrays
+// for each face type: TOP_CAP, BOT_CAP, OUTER_WALL, INNER_WALL, RULING_FACE
+// ═══════════════════════════════════════════════════════════════════════════
+function buildRibbon(centreline, W_half, depth, breakIndices){
+  // centreline:   [[x,y], ...] in canvas-space
+  // W_half:       half ribbon width
+  // depth:        extrusion depth
+  // breakIndices: Set of centreline indices that are bezier segment boundaries.
+  //               Tangent-break (ruling face) check runs ONLY at these indices.
+  //               Pass an empty Set for non-bezier paths (rings, links, polys).
+
+  const n=centreline.length;
+  if(n<2) return null;
+
+  // Convert [[x,y],...] to [{x,y},...] for computeNormals, then call it once.
+  const centrelineXY = centreline.map(p => ({ x: p[0], y: p[1] }));
+  const normals = computeNormals(centrelineXY);
+
+  // ── CLOSED-PATH DETECTION ──────────────────────────────────────────────
+  // A path is closed if its first and last points are within 1 canvas unit.
+  const firstPt=centreline[0], lastPt=centreline[n-1];
+  const isClosed = Math.hypot(lastPt[0]-firstPt[0], lastPt[1]-firstPt[1]) < 1.0;
+
+  // ── SEAM FIX ───────────────────────────────────────────────────────────
+  // computeNormals() treats the first and last points as open endpoints (one-sided
+  // tangents), so on a closed loop the two seam vertices got DIFFERENT normals and
+  // left a tiny notch (the tick on the O). Give both the same averaged normal.
+  if(isClosed && n>=3){
+    const inDx=centreline[n-1][0]-centreline[n-2][0], inDy=centreline[n-1][1]-centreline[n-2][1];
+    const outDx=centreline[1][0]-centreline[0][0],   outDy=centreline[1][1]-centreline[0][1];
+    const il=Math.hypot(inDx,inDy)||1, ol=Math.hypot(outDx,outDy)||1;
+    const tx=inDx/il+outDx/ol, ty=inDy/il+outDy/ol, tl=Math.hypot(tx,ty);
+    if(tl>1e-4){
+      const sn={x:-ty/tl, y:tx/tl};
+      normals[0]={...sn}; normals[n-1]={...sn};
+    }
+  }
+
+  // ── TANGENT BREAKS (Regression 1 fix) ─────────────────────────────────
+  // Only check at bezier segment boundary indices supplied by the caller.
+  // This prevents false positives on smooth subdivision points within a curve.
+  const BREAK_THRESH=15*D2R;
+  const BEVEL_THRESH=30*D2R;
+  const tangentBreaks=[];
+  for(const i of (breakIndices||new Set())){
+    if(i<1||i>n-2) continue; // must be a true interior point
+    const dxIn=centreline[i][0]-centreline[i-1][0];
+    const dyIn=centreline[i][1]-centreline[i-1][1];
+    const lenIn=Math.hypot(dxIn,dyIn)||1;
+    const dxOut=centreline[i+1][0]-centreline[i][0];
+    const dyOut=centreline[i+1][1]-centreline[i][1];
+    const lenOut=Math.hypot(dxOut,dyOut)||1;
+    const dot=(dxIn/lenIn)*(dxOut/lenOut)+(dyIn/lenIn)*(dyOut/lenOut);
+    const angle=Math.acos(Math.max(-1,Math.min(1,dot)));
+    if(angle>BREAK_THRESH) tangentBreaks.push({i,angle});
+  }
+
+  // ── VERTEX HELPERS ─────────────────────────────────────────────────────
+  // Three.js coords: X = canvas X, Y = -canvas Y (flipped), Z = 0 top / -depth bottom
+  // normals[i] is {x,y} from computeNormals.
+  function topOuter(i){ const[cx2,cy2]=centreline[i]; const{x:nx,y:ny}=normals[i]; return [cx2+nx*W_half, -(cy2+ny*W_half), 0]; }
+  function topInner(i){ const[cx2,cy2]=centreline[i]; const{x:nx,y:ny}=normals[i]; return [cx2-nx*W_half, -(cy2-ny*W_half), 0]; }
+  function botOuter(i){ const[cx2,cy2]=centreline[i]; const{x:nx,y:ny}=normals[i]; return [cx2+nx*W_half, -(cy2+ny*W_half), -depth]; }
+  function botInner(i){ const[cx2,cy2]=centreline[i]; const{x:nx,y:ny}=normals[i]; return [cx2-nx*W_half, -(cy2-ny*W_half), -depth]; }
+
+  // ── ACCUMULATORS ───────────────────────────────────────────────────────
+  const top=[],bot=[],outer=[],inner=[],ruling=[];
+
+  function pushTri(arr,a,b,c){ arr.push(...a,...b,...c); }
+  // Quad ABCD → Triangle1: A,B,C  Triangle2: A,C,D
+  function pushQuad(arr,a,b,c,d){ pushTri(arr,a,b,c); pushTri(arr,a,c,d); }
+
+  // ── SEGMENT QUADS ──────────────────────────────────────────────────────
+  // Each quad ABCD → Triangle1: A,B,C  Triangle2: A,C,D
+  // Winding is CCW viewed from outside the solid (Three.js FrontSide convention).
+  for(let i=0;i<n-1;i++){
+    const TO_i =topOuter(i),  TO_i1=topOuter(i+1);
+    const TI_i =topInner(i),  TI_i1=topInner(i+1);
+    const BO_i =botOuter(i),  BO_i1=botOuter(i+1);
+    const BI_i =botInner(i),  BI_i1=botInner(i+1);
+
+    // TOP_CAP — normal toward +Z (toward viewer at 0° rotation)
+    // A=TO[i], B=TO[i+1], C=TI[i+1], D=TI[i]
+    pushQuad(top,  TO_i, TO_i1, TI_i1, TI_i);
+
+    // BOT_CAP — normal toward −Z (away from viewer at 0° rotation)
+    // A=BI[i], B=BI[i+1], C=BO[i+1], D=BO[i]
+    pushQuad(bot,  BI_i, BI_i1, BO_i1, BO_i);
+
+    // OUTER_WALL — normal away from centreline
+    // A=BO[i], B=BO[i+1], C=TO[i+1], D=TO[i]
+    pushQuad(outer, BO_i, BO_i1, TO_i1, TO_i);
+
+    // INNER_WALL — normal toward centreline (reversed relative to OUTER_WALL)
+    // A=BI[i+1], B=BI[i], C=TI[i], D=TI[i+1]
+    pushQuad(inner, BI_i1, BI_i, TI_i, TI_i1);
+  }
+
+  // ── RULING FACES ───────────────────────────────────────────────────────
+  for(const{i,angle} of tangentBreaks){
+    const TO=topOuter(i), TI=topInner(i);
+    const BO=botOuter(i), BI=botInner(i);
+    pushQuad(ruling, TO, TI, BI, BO);
+  }
+
+  // ── OPEN-PATH END CAPS ─────────────────────────────────────────────────
+  // For open paths (not closed loops), generate a flat rectangular face at
+  // each endpoint to seal the ribbon cross-section.
+  // These are perpendicular termination faces — assigned to rulingFace material.
+  if(!isClosed){
+    // Start cap at i=0 — normal points backward (away from path start)
+    // A=TI[0], B=TO[0], C=BO[0], D=BI[0]
+    const TI_s=topInner(0), TO_s=topOuter(0);
+    const BO_s=botOuter(0), BI_s=botInner(0);
+    pushQuad(ruling, TI_s, TO_s, BO_s, BI_s);
+
+    // End cap at i=n-1 — normal points forward (away from path end)
+    // A=TO[n-1], B=TI[n-1], C=BI[n-1], D=BO[n-1]
+    const TO_e=topOuter(n-1), TI_e=topInner(n-1);
+    const BO_e=botOuter(n-1), BI_e=botInner(n-1);
+    pushQuad(ruling, TO_e, TI_e, BI_e, BO_e);
+  }
+
+  return {
+    topCap:    new Float32Array(top),
+    botCap:    new Float32Array(bot),
+    outerWall: new Float32Array(outer),
+    innerWall: new Float32Array(inner),
+    rulingFace:new Float32Array(ruling)
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAZE SOLVER
+// ═══════════════════════════════════════════════════════════════════════════
+function solveMaze(geo, p){
+  const {ringData, linkList, letterBlockedByZone} = geo;
+  const R = p.rings;
+
+  function norm(a){ return ((a%360)+360)%360; }
+  function gapMid(s,e){ const ns=norm(s),ne=norm(e); return ns<ne?(ns+ne)/2:norm((ns+ne+360)/2); }
+
+  // Does angle `a` fall inside range [s,e] (degrees, possibly wrapping)?
+  function inRange(a, s, e){
+    const na=norm(a), ns=norm(s), ne=norm(e);
+    if(ns<=ne) return na>=ns && na<=ne;
+    return na>=ns || na<=ne;
+  }
+
+  // Does the SHORT arc from a1→a2 cross any blocker?
+  // Blockers: radial link angles (points) + letter blocked ranges
+  function arcBlocked(a1, a2, linkAngles, letterRanges){
+    let diff = norm(a2-a1); if(diff>180) diff-=360;
+    const absD = Math.abs(diff);
+    if(absD < 0.01) return false;
+
+    // Check link point blockers
+    for(const ba of linkAngles){
+      const d1 = norm(norm(ba)-a1);
+      if(diff>=0 ? (d1>0 && d1<diff) : (d1>360+diff && d1<360)) return true;
+    }
+
+    // Check letter range blockers: sample the arc at ~1° and test each sample
+    if(letterRanges && letterRanges.length){
+      const steps = Math.max(3, Math.ceil(absD));
+      for(let s=1; s<steps; s++){
+        const a = norm(a1 + diff*(s/steps));
+        for(const [rs,re] of letterRanges){
+          if(inRange(a, rs, re)) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // Blockers for zone z: link angles + letter blocked ranges
+  function zoneLinkAngles(z){ return linkList.filter(lk=>lk.ring===z-1).map(lk=>norm(lk.angle)); }
+  function zoneLetterRanges(z){ return letterBlockedByZone[z] || []; }
+
+  // ── Build nodes ──────────────────────────────────────────────────────────
+  const nodes=[], nodeMap={};
+  function addNode(zone,angle,side){
+    const a=Math.round(norm(angle)*10)/10;
+    const k=`${zone}:${a}:${side}`;
+    if(nodeMap[k]!==undefined) return nodeMap[k];
+    const id=nodes.length; nodes.push({id,zone,angle:a,side}); nodeMap[k]=id; return id;
+  }
+
+  for(let zone=1;zone<R;zone++){
+    for(const[s,e] of (ringData[zone-1].allGaps||[])) addNode(zone,gapMid(s,e),'inner');
+    for(const[s,e] of (ringData[zone].allGaps||[]))   addNode(zone,gapMid(s,e),'outer');
+  }
+
+  const N=nodes.length;
+  const adj=Array.from({length:N},()=>[]);
+  function connect(a,b){ if(a>=0&&b>=0&&a<N&&b<N){adj[a].push(b);adj[b].push(a);} }
+
+  // ── Arc edges: blocked by links AND letter ranges ────────────────────────
+  const byZone={};
+  for(const nd of nodes){ if(!byZone[nd.zone]) byZone[nd.zone]=[]; byZone[nd.zone].push(nd.id); }
+
+  for(const[zStr,ids] of Object.entries(byZone)){
+    const z=parseInt(zStr);
+    const linkAngles=zoneLinkAngles(z);
+    const letterRanges=zoneLetterRanges(z);
+    for(let i=0;i<ids.length;i++) for(let j=i+1;j<ids.length;j++){
+      const a=nodes[ids[i]].angle, b=nodes[ids[j]].angle;
+      if(!arcBlocked(a,b,linkAngles,letterRanges)) connect(ids[i],ids[j]);
+    }
+  }
+
+  // ── Radial GAP crossings ─────────────────────────────────────────────────
+  const GOAL_ID=-1;
+  for(const nd of nodes){
+    if(nd.side!=='inner') continue;
+    if(nd.zone===1){
+      adj[nd.id].push(GOAL_ID);
+    } else {
+      const matchId=nodeMap[`${nd.zone-1}:${nd.angle}:outer`];
+      if(matchId!==undefined) connect(nd.id,matchId);
+      else {
+        const newId=addNode(nd.zone-1,nd.angle,'outer');
+        while(adj.length<=newId) adj.push([]);
+        connect(nd.id,newId);
+      }
+    }
+  }
+
+  // ── Radial link crossings ────────────────────────────────────────────────
+  for(const lk of linkList){
+    const a=norm(lk.angle);
+    const outerZone=lk.ring+1, innerZone=lk.ring;
+    if(outerZone>=R) continue;
+    const outerNd=addNode(outerZone,a,'link');
+    while(adj.length<=outerNd) adj.push([]);
+    const linkAngles=zoneLinkAngles(outerZone).filter(b=>Math.abs(norm(b-a))>0.1);
+    const letterRanges=zoneLetterRanges(outerZone);
+    for(const nd of nodes){
+      if(nd.zone!==outerZone) continue;
+      if(!arcBlocked(a,nd.angle,linkAngles,letterRanges)) connect(outerNd,nd.id);
+    }
+    if(innerZone===0){ adj[outerNd].push(GOAL_ID); }
+    else {
+      const innerNd=addNode(innerZone,a,'outer');
+      while(adj.length<=innerNd) adj.push([]);
+      connect(outerNd,innerNd);
+    }
+  }
+
+  // ── Start nodes ──────────────────────────────────────────────────────────
+  while(adj.length<nodes.length) adj.push([]);
+  const startIds=[];
+  for(const[s,e] of (ringData[R-1].allGaps||[])){
+    const mid=gapMid(s,e);
+    const nid=nodeMap[`${R-1}:${Math.round(norm(mid)*10)/10}:outer`]??addNode(R-1,mid,'outer');
+    startIds.push(nid);
+  }
+
+  // ── BFS ──────────────────────────────────────────────────────────────────
+  while(adj.length<nodes.length) adj.push([]);
+  const dist=new Array(nodes.length).fill(-1);
+  const prev=new Array(nodes.length).fill(-2);
+  let goalPrev=-1;
+  const queue=[];
+  for(const sid of startIds){
+    if(sid>=0&&sid<nodes.length&&dist[sid]===-1){dist[sid]=0;prev[sid]=-3;queue.push(sid);}
+  }
+  let head=0;
+  bfs: while(head<queue.length){
+    const cur=queue[head++];
+    for(const nb of adj[cur]){
+      if(nb===GOAL_ID){goalPrev=cur;break bfs;}
+      if(nb<0||nb>=nodes.length) continue;
+      if(dist[nb]===-1){dist[nb]=dist[cur]+1;prev[nb]=cur;queue.push(nb);}
+    }
+  }
+  if(goalPrev===-1) return null;
+
+  const path=[];
+  let cur=goalPrev;
+  while(cur>=0){path.push(cur);const p2=prev[cur];cur=(p2===-3)?-1:p2;}
+  path.reverse();
+  return{path,nodes,ringData,R};
+}
+
+function solutionToPoints(solverResult, geo){
+  // Path travels dead-centre between rings (mid-corridor radius).
+  // Arcs only connect nodes the solver verified are clear of links and letter strokes.
+  // Radial steps cross gaps straight inward.
+  // The last node is always a zone=1 inner node (gap in ring[0]).
+  // After it we step through ring[0] to the LMNO boundary ellipse.
+
+  const{path,nodes,R}=solverResult;
+  const{ringData,cx,cy,baseRX,baseRY}=geo;
+  if(!path||path.length===0) return [];
+
+  function midR(zone){
+    const outer=Math.min(zone,R-1), inner=Math.max(0,zone-1);
+    return{rx:(ringData[inner].rx+ringData[outer].rx)/2,
+           ry:(ringData[inner].ry+ringData[outer].ry)/2};
+  }
+
+  const pts=[];
+  for(let i=0;i<path.length;i++){
+    const nd=nodes[path[i]];
+    const prevNd=i>0?nodes[path[i-1]]:null;
+    const{rx,ry}=midR(nd.zone);
+
+    if(i===0){ pts.push(ellPt(cx,cy,rx,ry,ELL_ROT_DEG,nd.angle)); continue; }
+
+    if(prevNd.zone===nd.zone){
+      // Arc dead-centre in corridor
+      const a1=prevNd.angle,a2=nd.angle;
+      let diff=a2-a1;
+      if(diff>180) diff-=360;
+      if(diff<-180) diff+=360;
+      const steps=Math.max(2,Math.ceil(Math.abs(diff)/2));
+      for(let s=1;s<=steps;s++){
+        const a=((a1+diff*(s/steps))%360+360)%360;
+        pts.push(ellPt(cx,cy,rx,ry,ELL_ROT_DEG,a));
+      }
+    } else {
+      // Radial crossing — step to mid-radius of new zone at this angle
+      pts.push(ellPt(cx,cy,rx,ry,ELL_ROT_DEG,nd.angle));
+    }
+  }
+
+  // After the last node (zone=1 inner = gap in ring[0]), step through to LMNO boundary
+  const lastNd=nodes[path[path.length-1]];
+  const r0=ringData[0];
+  pts.push(ellPt(cx,cy,r0.rx,r0.ry,ELL_ROT_DEG,lastNd.angle));   // ring[0] face
+  pts.push(ellPt(cx,cy,baseRX,baseRY,ELL_ROT_DEG,lastNd.angle));  // LMNO boundary
+
+  return pts.filter((pt,i)=>i===0||Math.hypot(pt[0]-pts[i-1][0],pt[1]-pts[i-1][1])>0.5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DIFFICULTY PRESETS
+// ═══════════════════════════════════════════════════════════════════════════
+const DIFFICULTY_PRESETS = {
+  easy:   { gaps:3,  gapsize:20, gapoffset:50, jitter:3,  linkpct:3  },
+  medium: { gaps:4,  gapsize:14, gapoffset:40, jitter:10, linkpct:8  },
+  hard:   { gaps:8,  gapsize:10, gapoffset:28, jitter:20, linkpct:20 }
+};
+
+function applyDifficulty(level){
+  const preset = DIFFICULTY_PRESETS[level];
+  if(!preset) return;
+  ['easy','medium','hard'].forEach(d=>{
+    document.getElementById('diff-'+d).classList.toggle('active', d===level);
+  });
+  Object.entries(preset).forEach(([id,val])=>setSlider(id,val));
+  window._solveActive=false;
+  window._solvePath=null;
+  document.getElementById('btn-solve').textContent='◎ Show Solution';
+  document.getElementById('btn-solve').className='sb-btn';
+  redraw();
+}
+
+function toggleSolve(){
+  if(window._solveActive){
+    window._solveActive=false;
+    window._solvePath=null;
+    document.getElementById('btn-solve').textContent='◎ Show Solution';
+    document.getElementById('btn-solve').className='sb-btn';
+    document.getElementById('unsolvable-warning').style.display='none';
+    document.getElementById('btn-force').style.display='none';
+    redrawViewOnly();
+    return;
+  }
+  if(!_lastGeo){redraw();return;}
+  const p=getParams();
+  const result=solveMaze(_lastGeo,p);
+  if(result){
+    window._solveActive=true;
+    window._solvePath=solutionToPoints(result,_lastGeo);
+    document.getElementById('btn-solve').textContent='◎ Hide Solution';
+    document.getElementById('btn-solve').className='sb-btn solving';
+    document.getElementById('unsolvable-warning').style.display='none';
+    document.getElementById('btn-force').style.display='none';
+  } else {
+    window._solveActive=false;
+    window._solvePath=null;
+    document.getElementById('btn-solve').textContent='◎ Show Solution';
+    document.getElementById('btn-solve').className='sb-btn';
+    document.getElementById('unsolvable-warning').style.display='block';
+    document.getElementById('btn-force').style.display='';
+  }
+  redrawViewOnly();
+}
+
+function forceSolution(){
+  // Nudge gaps wider and links lower until a solution exists,
+  // keeping rings/spacing/seed/proximity/style intact.
+  let gaps    = parseInt(document.getElementById('gaps').value);
+  let linkpct = parseInt(document.getElementById('linkpct').value);
+  let gapsize = parseFloat(document.getElementById('gapsize').value);
+  let solved  = false;
+
+  // Try up to 20 iterations of loosening
+  for(let iter=0; iter<20 && !solved; iter++){
+    // Each iteration: widen gaps a bit, shrink links a bit, widen gap size a bit
+    if(linkpct > 0)  linkpct  = Math.max(0, linkpct - 3);
+    gaps    = Math.min(100, gaps + 8);
+    gapsize = Math.min(40,  gapsize + 2);
+
+    setSlider('gaps',    gaps);
+    setSlider('linkpct', linkpct);
+    setSlider('gapsize', gapsize);
+
+    const p = getParams();
+    const geo = buildGeometry(p);
+    const result = solveMaze(geo, p);
+    if(result){
+      _lastGeo = geo;
+      window._solveActive = true;
+      window._solvePath   = solutionToPoints(result, geo);
+      solved = true;
+    }
+  }
+
+  if(solved){
+    document.getElementById('btn-solve').textContent='◎ Hide Solution';
+    document.getElementById('btn-solve').className='sb-btn solving';
+    document.getElementById('unsolvable-warning').style.display='none';
+    document.getElementById('btn-force').style.display='none';
+    redraw();
+  } else {
+    // Last resort: reset gaps/links to very open values and regenerate
+    setSlider('gaps', 60); setSlider('linkpct', 0); setSlider('gapsize', 20);
+    redraw();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THREE.JS STATE
+// ═══════════════════════════════════════════════════════════════════════════
+const FACE_COLOURS = {
+  TOP_CAP:     '#C0201E',
+  BOT_CAP:     '#0A0A0A',
+  OUTER_WALL:  '#888888',
+  INNER_WALL:  '#888888',
+  RULING_FACE: '#888888',
+  LMNO_TOP:    '#C0201E',
+  LMNO_BOT:    '#0A0A0A',
+  LMNO_OUTER:  '#888888',
+  LMNO_INNER:  '#888888',
+  LMNO_RULING: '#888888'
+};
+
+let _threeRenderer=null, _threeScene=null, _threeCamera=null, _threeOrthoCamera=null;
+let _threePerspCamera=null; // kept separately for switchCamera
+let _threeGroup=null;
+let _threeControls=null; // OrbitControls
+let _threeAnimFrameId=null; // animation loop ID
+// 5 module-level material refs so updateFaceColour can reach them
+let matTopCap=null, matBotCap=null, matOuterWall=null, matInnerWall=null, matRuling=null;
+// Current meshes
+let _threeMeshes=null;
+// Ring Orbit state
+let _ringGroups=[];      // one THREE.Group per labyrinth ring
+let _letterGroup=null;   // LMNO letters, arcs, links — never rotated by orbit
+let _orbitActive=false;
+let _needsRender=true;    // set whenever the 3D scene must be redrawn
+let _viewLocked=false;   // camera locked to the default LMNO 3D view
+let _contentR=0;         // bounding radius of the labyrinth (canvas units)
+let _linkMesh=null, _linkData=[];  // dynamic link ribbons that follow their rings
+let _orbitTiltsY=[];     // initial Fibonacci Y-tilts per ring (restored on orbit off)
+// 2D canvas orbit animation state
+let _camAzim2D=0;        // camera azimuth for 2D orbit (degrees)
+let _orbitLastTs=null;
+let _2dOrbitAnimId=null;
+
+function initThree(){
+  if(_threeRenderer) return;
+  const canvas=document.getElementById('threeCanvas');
+  _threeRenderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+  _threeRenderer.setPixelRatio(window.devicePixelRatio||1);
+  _threeRenderer.setClearColor(0xffffff,1);
+
+  _threeScene=new THREE.Scene();
+  _threePerspCamera=new THREE.PerspectiveCamera(45,1,5,5000);
+  _threePerspCamera.position.set(0,0,500);
+  _threePerspCamera.lookAt(0,0,0);
+  _threeCamera=_threePerspCamera; // active camera starts as persp
+
+  // Ortho camera
+  _threeOrthoCamera=new THREE.OrthographicCamera(-400,400,400,-400,-20000,20000);
+  _threeOrthoCamera.position.set(0,0,500);
+  _threeOrthoCamera.lookAt(0,0,0);
+
+  // OrbitControls — attached to active camera
+  _threeControls=new THREE.OrbitControls(_threeCamera,canvas);
+  _threeControls.enableDamping=true;
+  _threeControls.dampingFactor=0.05;
+  _threeControls.enablePan=true;
+  _threeControls.enableZoom=true;
+
+  // Sync drag → rotX/rotY sliders via camera spherical coords
+  _threeControls.addEventListener('change',()=>{
+    if(!_threeCamera||!_threeControls||_viewLocked) return;
+    const v=new THREE.Vector3().subVectors(_threeCamera.position,_threeControls.target);
+    const sp=new THREE.Spherical().setFromVector3(v);
+    const pitchDeg=parseFloat(((Math.PI/2-sp.phi)*(180/Math.PI)).toFixed(1));
+    const yawDeg=parseFloat(((sp.theta)*(180/Math.PI)).toFixed(1));
+    setSlider('rotX',Math.max(-180,Math.min(180,pitchDeg)));
+    setSlider('rotY',Math.max(-180,Math.min(180,yawDeg)));
+  });
+  function animate(){
+    _threeAnimFrameId=requestAnimationFrame(animate);
+    const moved=_threeControls?_threeControls.update():false;
+    if(_orbitActive && _ringGroups.length){
+      const orbitEl=document.getElementById('orbitSpeed');
+      const sv=orbitEl?parseFloat(orbitEl.value):30;
+      const baseSpeed=0.0005+(sv/100)*(0.01-0.0005);
+      for(let i=0;i<_ringGroups.length;i++) _ringGroups[i].rotation.y+=baseSpeed*(1+i*0.07);
+      updateLinks();
+      _needsRender=true;
+    }
+    // Draw only when the camera moved, the orbit is running, or the scene changed.
+    if((moved||_needsRender) && _threeRenderer && document.body.classList.contains('mode3d')){
+      _threeRenderer.render(_threeScene,_threeCamera);
+      _needsRender=false;
+    }
+  }
+  animate();
+
+  // Create the 5 materials from FACE_COLOURS — FrontSide, depth-tested
+  matTopCap   =new THREE.MeshBasicMaterial({color:FACE_COLOURS.TOP_CAP,    side:THREE.FrontSide, depthTest:true,depthWrite:true});
+  matBotCap   =new THREE.MeshBasicMaterial({color:FACE_COLOURS.BOT_CAP,    side:THREE.FrontSide, depthTest:true,depthWrite:true});
+  matOuterWall=new THREE.MeshBasicMaterial({color:FACE_COLOURS.OUTER_WALL,  side:THREE.FrontSide, depthTest:true,depthWrite:true});
+  matInnerWall=new THREE.MeshBasicMaterial({color:FACE_COLOURS.INNER_WALL,  side:THREE.FrontSide, depthTest:true,depthWrite:true});
+  matRuling   =new THREE.MeshBasicMaterial({color:FACE_COLOURS.RULING_FACE, side:THREE.DoubleSide,depthTest:true,depthWrite:true});
+  // LMNO-specific materials (used when LMNO Colours toggle is on)
+  matLmnoTopCap   =new THREE.MeshBasicMaterial({color:FACE_COLOURS.LMNO_TOP,    side:THREE.FrontSide, depthTest:true,depthWrite:true});
+  matLmnoBotCap   =new THREE.MeshBasicMaterial({color:FACE_COLOURS.LMNO_BOT,    side:THREE.FrontSide, depthTest:true,depthWrite:true});
+  matLmnoOuterWall=new THREE.MeshBasicMaterial({color:FACE_COLOURS.LMNO_OUTER,   side:THREE.FrontSide, depthTest:true,depthWrite:true});
+  matLmnoInnerWall=new THREE.MeshBasicMaterial({color:FACE_COLOURS.LMNO_INNER,   side:THREE.FrontSide, depthTest:true,depthWrite:true});
+  matLmnoRuling   =new THREE.MeshBasicMaterial({color:FACE_COLOURS.LMNO_RULING,  side:THREE.DoubleSide,depthTest:true,depthWrite:true});
+
+  _threeGroup=new THREE.Group();
+  _threeScene.add(_threeGroup);
+}
+
+function applyOrbitTilts(N){
+  // Each ring orbits around its own tilted Y axis (like a coin spinning on a table).
+  // We achieve this by giving each _ringGroups[i] two levels:
+  //   outer (tiltGroup): fixed tilt around X using Fibonacci distribution
+  //   inner (spinGroup): rotates around Y — this is the actual orbit
+  // Rings already in _ringGroups are plain THREE.Groups from buildThreeGeometry.
+  // We wrap them here: move ring meshes into a spinGroup, set tiltGroup rotation.x,
+  // add tiltGroup to _threeGroup.
+  // But since _ringGroups are already added to _threeGroup, we just assign
+  // rotation.x (tilt) and store initial rotation.y values.
+  const goldenAngle=Math.PI*(3-Math.sqrt(5));
+  // Cap tilt to 60° so rings never go near-vertical and intersect the letter plane
+  const maxTilt=60*Math.PI/180;
+  _orbitTiltsY=[];
+  _ringGroups.forEach((rg,i)=>{
+    // Fibonacci elevation: spread from -maxTilt to +maxTilt (not full sphere — avoids clipping)
+    const t=N>1?i/(N-1):0.5;
+    const tiltX=(t*2-1)*maxTilt; // linear -maxTilt..+maxTilt
+    const tiltY=goldenAngle*i;
+    rg.rotation.x=tiltX;
+    rg.rotation.y=tiltY;
+    rg.rotation.z=0;
+    _orbitTiltsY.push(tiltY);
+  });
+  updateLinks();
+}
+
+function toggleRingOrbit(){
+  const tog=document.getElementById('toggleOrbit');
+  _orbitActive=!_orbitActive;
+  tog.classList.toggle('on',_orbitActive);
+  // Update button label to show play/pause state
+  const label=tog.closest('.trow')&&tog.closest('.trow').querySelector('span');
+  if(label) label.textContent=_orbitActive?'▶ Playing':'⏸ Paused';
+  if(_orbitActive && _ringGroups.length && _orbitTiltsY.length===0){
+    // First activation — apply Fibonacci tilts (3D mode)
+    applyOrbitTilts(_ringGroups.length);
+  }
+  // 2D canvas orbit: start or stop animation loop
+  const p=getParams();
+  if(!p.is3d){
+    if(_orbitActive){
+      // Start 2D orbit animation loop if not already running
+      if(!_2dOrbitAnimId){
+        _orbitLastTs=null;
+        _2dOrbitAnimId=requestAnimationFrame(_tick2DOrbit);
+      }
+    } else {
+      // Stop loop and restore static flat view
+      if(_2dOrbitAnimId){ cancelAnimationFrame(_2dOrbitAnimId); _2dOrbitAnimId=null; }
+      _orbitLastTs=null;
+      redrawViewOnly();
+    }
+  }
+}
+
+function switchCamera(useOrtho){
+  if(_threeControls){ _threeControls.dispose(); _threeControls=null; }
+  _threeCamera=useOrtho?_threeOrthoCamera:_threePerspCamera;
+  const canvas=document.getElementById('threeCanvas');
+  _threeControls=new THREE.OrbitControls(_threeCamera,canvas);
+  _threeControls.enableDamping=true;
+  _threeControls.dampingFactor=0.05;
+  _threeControls.enablePan=true;
+  _threeControls.enableZoom=true;
+  _threeControls.enableRotate=!_viewLocked;
+  _threeControls.mouseButtons={LEFT:THREE.MOUSE.ROTATE,MIDDLE:THREE.MOUSE.DOLLY,RIGHT:THREE.MOUSE.PAN};
+  if(useOrtho) _threeControls.zoomToCursor=false;
+}
+
+function disposeThreeMeshes(){
+  if(!_threeGroup) return;
+  const disposeObject=(obj)=>{
+    while(obj.children.length){
+      const child=obj.children[0];
+      obj.remove(child);
+      if(child.isGroup) disposeObject(child);
+      else if(child.geometry) child.geometry.dispose();
+    }
+  };
+  disposeObject(_threeGroup);
+  _ringGroups=[];
+  _letterGroup=null;
+  _threeMeshes=null;
+  _linkMesh=null; _linkData=[];
+  _orbitTiltsY=[];
+}
+
+function buildThreeGeometry(geo, p){
+  // Collect all centreline polylines from rings, links, and logo elements
+  // Each polyline → ribbon geometry → add to 5 accumulator arrays
+
+  const{ringData,linkList,ls,logtx,logty,W,H,cx,cy}=geo;
+  // Half-width of every ribbon, in canvas units (same units as ring radii and letter coords).
+  // extDepth is the Z extrusion in the same units.
+  const W_half = p.thickness;
+  const depth=p.extDepth; // extrude depth
+
+
+  // Accumulate per-ring geometry + a shared letter group
+  const EMPTY_BREAKS=new Set();
+
+  // Centring shift — applied to all vertices
+  const shiftX=-cx, shiftY=cy; // Y flip already done in buildRibbon (neg Y)
+
+  // Helper: build five meshes from five arrays and add to a target group
+  function makeMeshGroup(top,bot,outer,inner,ruling,targetGroup){
+    const makeMesh=(arr,mat)=>{
+      if(!arr.length) return null;
+      const fa=new Float32Array(arr);
+      for(let j=0;j<fa.length;j+=3){ fa[j]+=shiftX; fa[j+1]+=shiftY; }
+      const g=new THREE.BufferGeometry();
+      g.setAttribute('position',new THREE.BufferAttribute(fa,3));
+      return new THREE.Mesh(g,mat);
+    }
+    [[top,matTopCap],[bot,matBotCap],[outer,matOuterWall],[inner,matInnerWall],[ruling,matRuling]]
+      .forEach(([arr,mat])=>{ const m=makeMesh(arr,mat); if(m) targetGroup.add(m); });
+  }
+
+  disposeThreeMeshes();
+
+  // ── Per-ring groups ────────────────────────────────────────────────────
+  for(let i=0;i<p.rings;i++){
+    const rg=new THREE.Group();
+    const top=[],bot=[],outer=[],inner=[],ruling=[];
+    const{rx,ry,segs}=ringData[i];
+    for(const[a1,a2] of segs){
+      if(a2-a1<0.5) continue;
+      const steps=Math.max(16,Math.ceil(Math.abs(a2-a1)*0.5));
+      const line=[];
+      for(let s=0;s<=steps;s++){
+        const tDeg=a1+(a2-a1)*(s/steps);
+        line.push(ellPt(cx,cy,rx,ry,ELL_ROT_DEG,tDeg));
+      }
+      const rb=buildRibbon(line,W_half,depth,EMPTY_BREAKS);
+      if(rb){
+        for(const v of rb.topCap)    top.push(v);
+        for(const v of rb.botCap)    bot.push(v);
+        for(const v of rb.outerWall) outer.push(v);
+        for(const v of rb.innerWall) inner.push(v);
+        for(const v of rb.rulingFace)ruling.push(v);
+      }
+    }
+    makeMeshGroup(top,bot,outer,inner,ruling,rg);
+    _threeGroup.add(rg);
+    _ringGroups.push(rg);
+  }
+
+  // ── Letter group (links, arcs, letters) — never rotated by orbit ──────
+  _letterGroup=new THREE.Group();
+  _threeGroup.add(_letterGroup);
+
+  // Shared addRibbon for letter group
+  const lgTop=[],lgBot=[],lgOuter=[],lgInner=[],lgRuling=[];
+  function addToLetter(polyline,breakIndices){
+    if(!polyline||polyline.length<2) return;
+    const rb=buildRibbon(polyline,W_half,depth,breakIndices||EMPTY_BREAKS);
+    if(!rb) return;
+    for(const v of rb.topCap)    lgTop.push(v);
+    for(const v of rb.botCap)    lgBot.push(v);
+    for(const v of rb.outerWall) lgOuter.push(v);
+    for(const v of rb.innerWall) lgInner.push(v);
+    for(const v of rb.rulingFace)lgRuling.push(v);
+  }
+
+  // Links — each link is attached to the two ring groups it joins and is rebuilt
+  // from their live transforms (updateLinks), so it orbits with the rings instead of
+  // sitting in the static logo group and z-fighting with the ring surfaces.
+  _contentR=0;
+  for(let i=0;i<p.rings;i++){ _contentR=Math.max(_contentR,ringData[i].rx,ringData[i].ry); }
+  _contentR+=W_half+depth;
+  _linkData=[];
+  {
+    const er2=ELL_ROT_DEG*D2R;
+    for(const{ring:ri,angle} of linkList){
+      if(ri>=p.rings-1) continue;
+      const t=angle*D2R;
+      const r0=ringData[ri],r1=ringData[ri+1];
+      const x1=cx+r0.rx*Math.cos(t)*Math.cos(er2)-r0.ry*Math.sin(t)*Math.sin(er2);
+      const y1=cy+r0.rx*Math.cos(t)*Math.sin(er2)+r0.ry*Math.sin(t)*Math.cos(er2);
+      const x2=cx+r1.rx*Math.cos(t)*Math.cos(er2)-r1.ry*Math.sin(t)*Math.sin(er2);
+      const y2=cy+r1.rx*Math.cos(t)*Math.sin(er2)+r1.ry*Math.sin(t)*Math.cos(er2);
+      // ring-local coords (same centring/flip as buildRibbon + shift)
+      _linkData.push({ra:ri,rb:ri+1,ax:x1-cx,ay:cy-y1,bx:x2-cx,by:cy-y2,w:W_half,d:depth,l0:Math.hypot(x2-x1,y2-y1)||1});
+    }
+  }
+  if(_linkData.length){
+    const N=_linkData.length;
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(N*6*18),3));
+    for(let f=0;f<6;f++) g.addGroup(f*N*6,N*6,f);
+    // faces: top, bottom, +side, -side — shared materials so face colours stay live
+    _linkMesh=new THREE.Mesh(g,[matTopCap,matBotCap,matOuterWall,matInnerWall,matRuling,matRuling]);
+    _linkMesh.frustumCulled=false;
+    _threeGroup.add(_linkMesh);
+  }
+
+  // LMNO boundary arcs
+  if(p.showArcs){
+    for(const d of ARC_SVG_PATHS){
+      const{pts:polyRaw,breakIndices}=svgPathToPolyline(d);
+      const poly=polyRaw.map(([lx,ly])=>[lx*ls+logtx,ly*ls+logty]);
+      addToLetter(poly,breakIndices);
+    }
+  }
+
+  // LMNO letters
+  // ellipse type = smooth sampled arc (no bezier joins)
+  if(p.showLetters){
+    for(const el of LETTERS){
+      if(el.type==='poly'){
+        const transformed = el.pts.map(([lx,ly])=>[lx*ls+logtx, ly*ls+logty]);
+        for(let si=0; si<transformed.length-1; si++){
+          addToLetter([transformed[si], transformed[si+1]], EMPTY_BREAKS);
+        }
+
+        // Flat (bevel) join at every interior corner. Each segment is a rectangle with
+        // flat ends, exactly like every other path end; on the OUTER side of each turn a
+        // single flat triangle + flat wall closes the wedge between the two rectangles,
+        // so the letter reads as one continuous stroke at any angle (no gaps, no spikes).
+        const orientTri=(arr,p,q,r,nx,ny,nz)=>{
+          const ux=q[0]-p[0],uy=q[1]-p[1],uz=q[2]-p[2];
+          const vx=r[0]-p[0],vy=r[1]-p[1],vz=r[2]-p[2];
+          const cx3=uy*vz-uz*vy, cy3=uz*vx-ux*vz, cz3=ux*vy-uy*vx;
+          if(cx3*nx+cy3*ny+cz3*nz<0) arr.push(...p,...r,...q);
+          else arr.push(...p,...q,...r);
+        };
+        for(let si=1; si<transformed.length-1; si++){
+          const prev=transformed[si-1], curr=transformed[si], next=transformed[si+1];
+          let ax=curr[0]-prev[0], ay=curr[1]-prev[1];
+          let bx=next[0]-curr[0], by=next[1]-curr[1];
+          const al=Math.hypot(ax,ay)||1, bl=Math.hypot(bx,by)||1;
+          ax/=al; ay/=al; bx/=bl; by/=bl;
+          const cross=ax*by-ay*bx, dotAB=ax*bx+ay*by;
+          if(Math.atan2(Math.abs(cross),dotAB)<1e-3) continue;   // straight, no join needed
+          const side=cross>0?-1:1;                               // outer side of the turn
+          const th0=Math.atan2(side*ax,-side*ay);                // offset angle, incoming segment
+          const th1=Math.atan2(side*bx,-side*by);                // offset angle, outgoing segment
+          let dTh=th1-th0;
+          while(dTh> Math.PI) dTh-=2*Math.PI;
+          while(dTh<-Math.PI) dTh+=2*Math.PI;
+          const steps=1;                                         // one flat facet = bevel
+          const cT=[curr[0],-curr[1],0], cB=[curr[0],-curr[1],-depth];
+          let pk=null;
+          for(let k=0;k<=steps;k++){
+            const th=th0+dTh*(k/steps);
+            const px=curr[0]+Math.cos(th)*W_half, py=curr[1]+Math.sin(th)*W_half;
+            const cur={t:[px,-py,0], b:[px,-py,-depth], th};
+            if(pk){
+              orientTri(lgTop, cT, pk.t, cur.t, 0,0,1);
+              orientTri(lgBot, cB, pk.b, cur.b, 0,0,-1);
+              const mid=(pk.th+cur.th)/2, rx=Math.cos(mid), ry=-Math.sin(mid);
+              orientTri(lgRuling, pk.t, cur.t, cur.b, rx,ry,0);
+              orientTri(lgRuling, pk.t, cur.b, pk.b, rx,ry,0);
+            }
+            pk=cur;
+          }
+        }
+      } else {
+        const rot=el.rot*D2R;
+        const pts=[];
+        for(let ii=0;ii<=127;ii++){
+          const t=(ii/128)*2*Math.PI;
+          const lx=el.cx+el.rx*Math.cos(t)*Math.cos(rot)-el.ry*Math.sin(t)*Math.sin(rot);
+          const ly=el.cy+el.rx*Math.cos(t)*Math.sin(rot)+el.ry*Math.sin(t)*Math.cos(rot);
+          pts.push([lx*ls+logtx, ly*ls+logty]);
+        }
+        pts.push(pts[0]);
+        addToLetter(pts, EMPTY_BREAKS);
+      }
+    }
+  }
+
+  // Build letter group meshes
+  makeMeshGroup(lgTop,lgBot,lgOuter,lgInner,lgRuling,_letterGroup);
+  // Apply LMNO-specific materials if toggle is active
+  applyLmnoMaterials();
+
+  // Apply Fibonacci orbital tilts if orbit is active
+  if(_orbitActive) applyOrbitTilts(p.rings);
+  updateLinks();
+}
+
+// Link ribbons.
+// Each link runs centreline-to-centreline between its two rings (no trimming → no gap at any
+// thickness). Rings orbit independently, so when the far end drifts away from the ring it should
+// meet, the link blends smoothly into a rigid spoke that rides with its own ring instead of
+// stretching across the labyrinth; it re-attaches as the rings come back into alignment.
+const _lk={A:new THREE.Vector3(),B:new THREE.Vector3(),Br:new THREE.Vector3(),zA:new THREE.Vector3(),zB:new THREE.Vector3(),
+  d:new THREE.Vector3(),uA:new THREE.Vector3(),uB:new THREE.Vector3(),c:new THREE.Vector3(),V:[]};
+for(let i=0;i<8;i++) _lk.V.push(new THREE.Vector3());
+const _smooth=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
+function updateLinks(){
+  if(!_linkMesh||!_linkData.length) return;
+  const arr=_linkMesh.geometry.attributes.position.array;
+  const N=_linkData.length, {A,B,Br,zA,zB,d,uA,uB,c,V}=_lk;
+  // V index = end*4 + side*2 + level  (end 0=A 1=B · side 0=+ 1=− · level 0=top 1=bottom)
+  const quad=(f,k,i0,i1,i2,i3)=>{
+    let a=V[i0],b=V[i1];const q=V[i2];let e=V[i3];
+    const e1x=b.x-a.x,e1y=b.y-a.y,e1z=b.z-a.z,e2x=q.x-a.x,e2y=q.y-a.y,e2z=q.z-a.z;
+    const nx=e1y*e2z-e1z*e2y,ny=e1z*e2x-e1x*e2z,nz=e1x*e2y-e1y*e2x;
+    const mx=(a.x+b.x+q.x+e.x)/4-c.x,my=(a.y+b.y+q.y+e.y)/4-c.y,mz=(a.z+b.z+q.z+e.z)/4-c.z;
+    if(nx*mx+ny*my+nz*mz<0){ const t=b;b=e;e=t; }   // keep faces pointing outwards
+    let o=f*N*18+k*18;
+    for(const v of [a,b,q,a,q,e]){ arr[o++]=v.x; arr[o++]=v.y; arr[o++]=v.z; }
+  };
+  for(let k=0;k<N;k++){
+    const L=_linkData[k], ga=_ringGroups[L.ra], gb=_ringGroups[L.rb];
+    if(!ga||!gb) continue;
+    ga.updateMatrix(); gb.updateMatrix();
+    A.set(L.ax,L.ay,0).applyMatrix4(ga.matrix);
+    B.set(L.bx,L.by,0).applyMatrix4(gb.matrix);
+    zA.set(0,0,1).applyQuaternion(ga.quaternion);
+    zB.set(0,0,1).applyQuaternion(gb.quaternion);
+    // blend the far end towards a rigid spoke attached to ring A when the rings drift apart
+    const drift=_smooth(1.15*L.l0,2.2*L.l0,A.distanceTo(B));
+    if(drift>0){
+      Br.set(L.bx,L.by,0).applyMatrix4(ga.matrix);
+      B.lerp(Br,drift); zB.lerp(zA,drift).normalize();
+    }
+    d.subVectors(B,A); const len=d.length();
+    if(len<1e-6) continue;
+    d.divideScalar(len);
+    uA.crossVectors(d,zA); if(uA.lengthSq()<1e-8) uA.set(1,0,0);
+    uB.crossVectors(d,zB); if(uB.lengthSq()<1e-8) uB.copy(uA);
+    uA.normalize().multiplyScalar(L.w); uB.normalize().multiplyScalar(L.w);
+    const eps=L.d*0.02, h=L.d-eps*2;          // hairline inset avoids coplanar faces with the rings
+    for(let end=0;end<2;end++){
+      const E=end?B:A, U=end?uB:uA, Z=end?zB:zA;
+      for(let side=0;side<2;side++) for(let lv=0;lv<2;lv++)
+        V[end*4+side*2+lv].copy(E).addScaledVector(U,side?-1:1).addScaledVector(Z,-(eps+(lv?h:0)));
+    }
+    c.set(0,0,0); for(let i=0;i<8;i++) c.add(V[i]); c.multiplyScalar(0.125);
+    quad(0,k,0,4,6,2); quad(1,k,1,5,7,3);      // top, bottom
+    quad(2,k,0,4,5,1); quad(3,k,2,6,7,3);      // +side, −side
+    quad(4,k,0,1,3,2); quad(5,k,4,5,7,6);      // end caps
+  }
+  _linkMesh.geometry.attributes.position.needsUpdate=true;
+  _needsRender=true;
+}
+
+function sizeThreeRenderer(){
+  const wrap=document.getElementById('wrap');
+  const w=wrap.clientWidth, h=wrap.clientHeight;
+  const canvas=document.getElementById('threeCanvas');
+  // Canvas fills the entire wrap area (sidebar is a sibling element, not inside wrap)
+  canvas.style.width=w+'px';
+  canvas.style.height=h+'px';
+  if(!_threeRenderer) return;
+  _threeRenderer.setSize(w,h,false);
+
+  // Update perspective camera aspect
+  _threePerspCamera.aspect=w/h;
+  _threePerspCamera.updateProjectionMatrix();
+
+  // Update ortho camera: fit the document with 0.92 margin
+  const p=getParams();
+  // Fit the artboard OR the whole labyrinth, whichever is bigger, so large ring
+  // counts / spacings are never clipped by the viewport.
+  const docW=Math.max(p.cw,2*_contentR), docH=Math.max(p.ch,2*_contentR);
+  const scaleW=w/docW, scaleH=h/docH;
+  // Extra breathing room on phone-width viewports so the (slightly larger than the
+  // artboard) maze isn't clipped at the screen edges; pinch still zooms.
+  const scale=Math.min(scaleW,scaleH)*(w<600?0.78:0.92);
+  // In ortho, the camera frustum maps to screen pixels at 1:1.
+  // hw/hh are the half-extents in world units.
+  const hw=(w/scale)*0.5, hh=(h/scale)*0.5;
+  _threeOrthoCamera.left=-hw; _threeOrthoCamera.right=hw;
+  _threeOrthoCamera.top=hh;  _threeOrthoCamera.bottom=-hh;
+  // Depth range must cover the whole tilted/orbiting labyrinth on both sides of the camera,
+  // otherwise rings that swing past the camera plane get sliced off.
+  const depthSpan=Math.max(20000,_contentR*4);
+  _threeOrthoCamera.near=-depthSpan; _threeOrthoCamera.far=depthSpan;
+  _threeOrthoCamera.updateProjectionMatrix();
+}
+
+function renderThree(p){
+  if(!_threeRenderer) return;
+  _needsRender=true;
+  sizeThreeRenderer();
+
+  // Apply rotation from sliders to the geometry group
+  _threeGroup.rotation.x=p.rotX*D2R;
+  _threeGroup.rotation.y=p.rotY*D2R;
+  _threeGroup.rotation.z=p.rotZ*D2R;
+  if(_threeControls) _threeControls.update();
+
+  // Perspective vs orthographic — switch if needed
+  const perspDeg=p.perspective||0;
+  const useOrtho=perspDeg<1;
+  const currentlyOrtho=(_threeCamera===_threeOrthoCamera);
+  if(useOrtho!==currentlyOrtho && _threeRenderer) switchCamera(useOrtho);
+
+  if(!useOrtho){
+    _threePerspCamera.fov=perspDeg;
+    _threePerspCamera.updateProjectionMatrix();
+  }
+
+  // Scale group so document content fits the viewport
+  const docH=p.ch;
+  if(useOrtho){
+    _threeGroup.scale.setScalar(1);
+  } else {
+    const halfV=_threePerspCamera.fov*0.5*D2R;
+    const halfH=Math.atan(Math.tan(halfV)*_threePerspCamera.aspect);
+    const worldHalfH=Math.tan(halfV)*500;
+    let sc=worldHalfH*0.92/(Math.max(docH,p.ch)*0.5);
+    // keep the whole bounding sphere inside the frustum and in front of the camera
+    if(_contentR>0) sc=Math.min(sc,0.92*500*Math.sin(Math.min(halfV,halfH))/_contentR);
+    _threeGroup.scale.setScalar(sc);
+  }
+
+  // Background colour
+  const col=getDrawTheme(p.themeKey);
+  const bg=parseInt(col.bg.replace('#',''),16);
+  _threeRenderer.setClearColor(bg,1);
+
+  _threeRenderer.render(_threeScene,_threeCamera);
+}
+
+// LMNO-specific materials (when LMNO Colours toggle is on)
+let matLmnoTopCap=null, matLmnoBotCap=null, matLmnoOuterWall=null, matLmnoInnerWall=null, matLmnoRuling=null;
+let _lmnoColoursActive=true;   // logo geometry always has its own per-face colours
+
+function applyLmnoMaterials(){
+  if(!_letterGroup) return;
+  // Walk letterGroup children and set materials per face group
+  // letterGroup meshes are added in order: top,bot,outer,inner,ruling (from makeMeshGroup)
+  const mats=_lmnoColoursActive
+    ?[matLmnoTopCap||matTopCap, matLmnoBotCap||matBotCap, matLmnoOuterWall||matOuterWall, matLmnoInnerWall||matInnerWall, matLmnoRuling||matRuling]
+    :[matTopCap, matBotCap, matOuterWall, matInnerWall, matRuling];
+  _letterGroup.children.forEach((m,i)=>{ if(m.material&&mats[i]) m.material=mats[i]; });
+}
+
+function updateFaceColour(faceKey, hexValue){
+  FACE_COLOURS[faceKey]=hexValue;
+  const matMap={
+    TOP_CAP:    matTopCap,
+    BOT_CAP:    matBotCap,
+    OUTER_WALL: matOuterWall,
+    INNER_WALL: matInnerWall,
+    RULING_FACE:matRuling,
+    LMNO_TOP:   matLmnoTopCap,
+    LMNO_BOT:   matLmnoBotCap,
+    LMNO_OUTER: matLmnoOuterWall,
+    LMNO_INNER: matLmnoInnerWall,
+    LMNO_RULING:matLmnoRuling,
+  };
+  if(matMap[faceKey]) matMap[faceKey].color.set(hexValue);
+  // If LMNO material, also re-apply to letter group
+  if(faceKey.startsWith('LMNO_')) applyLmnoMaterials();
+}
+
+// Map from row id suffix to face key
+const FACE_ROW_MAP={
+  top:'TOP_CAP', bot:'BOT_CAP', outer:'OUTER_WALL', inner:'INNER_WALL', ruling:'RULING_FACE',
+  'lmno-top':'LMNO_TOP', 'lmno-bot':'LMNO_BOT', 'lmno-outer':'LMNO_OUTER', 'lmno-inner':'LMNO_INNER', 'lmno-ruling':'LMNO_RULING'
+};
+const FACE_COLOUR_NAMES={'#0A0A0A':'Black','#FFFFFF':'White','#C0201E':'Red','#888888':'Grey'};
+let _facePopoverOpen=null; // current open row suffix
+
+function openFacePopover(suffix){
+  const pop=document.getElementById('fc-popover');
+  const row=document.getElementById('fcr-'+suffix);
+  // Close if same row clicked again
+  if(_facePopoverOpen===suffix){ closeFacePopover(); return; }
+  _facePopoverOpen=suffix;
+  const faceKey=FACE_ROW_MAP[suffix];
+  const hex=FACE_COLOURS[faceKey];
+
+  // Build popover content
+  const presets=[{h:'#0A0A0A',n:'Black'},{h:'#FFFFFF',n:'White'},{h:'#C0201E',n:'Red'},{h:'#888888',n:'Grey'}];
+  const presetsHtml=presets.map(({h})=>
+    `<div class="fc-preset${hex.toUpperCase()===h.toUpperCase()?' active':''}" style="background:${h}"
+          onclick="applyFaceColour('${suffix}','${h}',event)"></div>`
+  ).join('');
+
+  pop.innerHTML=`
+    <div class="fc-presets">${presetsHtml}</div>
+    <input id="fc-wheel" type="color" value="${hex.length===7?hex:'#888888'}" oninput="applyFaceColour('${suffix}',this.value,event)">
+    <input id="fc-hex" type="text" value="${hex}" maxlength="7" placeholder="#RRGGBB"
+           oninput="onFaceHexInput('${suffix}',this.value)">
+  `;
+  pop.style.display='flex';
+  // Move popover to after the clicked row
+  row.parentNode.insertBefore(pop, row.nextSibling);
+  // Prevent immediate close
+  setTimeout(()=>{
+    document.addEventListener('click', closeFacePopoverOutside, {once:false, capture:true});
+  }, 0);
+}
+
+function closeFacePopover(){
+  const pop=document.getElementById('fc-popover');
+  pop.style.display='none';
+  _facePopoverOpen=null;
+  document.removeEventListener('click', closeFacePopoverOutside, true);
+}
+
+function closeFacePopoverOutside(e){
+  const pop=document.getElementById('fc-popover');
+  if(!pop.contains(e.target) && !e.target.closest('.face-colour-row')){
+    closeFacePopover();
+  }
+}
+
+function applyFaceColour(suffix, hex, e){
+  if(e) e.stopPropagation();
+  if(!hex||hex.length<4) return;
+  // Normalise to 7-char hex
+  const full=hex.length===4?`#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`:hex;
+  const faceKey=FACE_ROW_MAP[suffix];
+  FACE_COLOURS[faceKey]=full;
+  updateFaceColour(faceKey, full);
+  // Update swatch colour only — label stays as face type name
+  document.getElementById('fcs-'+suffix).style.background=full;
+  // Update popover inputs
+  const wheel=document.getElementById('fc-wheel');
+  if(wheel) wheel.value=full;
+  const hexIn=document.getElementById('fc-hex');
+  if(hexIn) hexIn.value=full;
+  // Refresh active state on presets
+  document.querySelectorAll('.fc-preset').forEach(p=>{
+    p.classList.toggle('active', p.style.backgroundColor && hexToRgb(full)===rgbToHex(p.style.backgroundColor));
+  });
+}
+
+function onFaceHexInput(suffix, val){
+  if(/^#[0-9a-fA-F]{6}$/.test(val)) applyFaceColour(suffix, val, null);
+}
+
+function hexToRgb(h){
+  const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+function rgbToHex(rgb){
+  const m=rgb.match(/\d+/g);
+  if(!m||m.length<3) return '';
+  return '#'+[m[0],m[1],m[2]].map(n=>parseInt(n).toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+
+function on3dParam(){
+  // Called when rotation/perspective sliders change in 3D mode — re-render only
+  const p=getParams();
+  if(!p.is3d) return;
+  // Switch between ortho and perspective camera when perspective crosses 0
+  const useOrtho=(p.perspective||0)<1;
+  const currentlyOrtho=(_threeCamera===_threeOrthoCamera);
+  if(useOrtho!==currentlyOrtho) switchCamera(useOrtho);
+  renderThree(p);
+  document.getElementById('st-3d').textContent=`3D X${parseFloat(p.rotX).toFixed(1)}° Y${parseFloat(p.rotY).toFixed(1)}° Z${parseFloat(p.rotZ||0).toFixed(1)}° d${p.extDepth}`;
+}
+
+// Lens effect presets — set rotX/Y/Z and perspective slider values
+const LENS_PRESETS={
+  'none':        {rotX:-28.4, rotY:-6.3, rotZ:-11.5, perspective:0},
+  'one-point':   {rotX:0,     rotY:0,    rotZ:0,      perspective:60},
+  'two-point':   {rotX:0,     rotY:35,   rotZ:0,      perspective:70},
+  'three-point': {rotX:30,    rotY:35,   rotZ:0,      perspective:75},
+  'isometric':   {rotX:-35.3, rotY:45,   rotZ:0,      perspective:0},
+  'birds-eye':   {rotX:-80,   rotY:0,    rotZ:0,      perspective:45},
+  'worms-eye':   {rotX:75,    rotY:0,    rotZ:0,      perspective:50},
+  'wide-angle':  {rotX:-20,   rotY:-10,  rotZ:-5,     perspective:110},
+  'telephoto':   {rotX:-15,   rotY:-5,   rotZ:0,      perspective:15},
+  'fisheye':     {rotX:-25,   rotY:-8,   rotZ:-8,     perspective:140},
+  'macro':       {rotX:-5,    rotY:0,    rotZ:0,      perspective:20},
+  'tilt-shift':  {rotX:-60,   rotY:0,    rotZ:0,      perspective:35},
+  'warped':      {rotX:-40,   rotY:25,   rotZ:15,     perspective:120},
+  'glitch':      {rotX:-22,   rotY:18,   rotZ:-14,    perspective:95},
+};
+
+function applyLensEffect(key){
+  const preset=LENS_PRESETS[key];
+  if(!preset) return;
+  setSlider('rotX',preset.rotX);
+  setSlider('rotY',preset.rotY);
+  setSlider('rotZ',preset.rotZ);
+  setSlider('perspective',preset.perspective);
+  on3dParam();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SOLUTION OVERLAY (3D mode — drawn on transparent mainCanvas above WebGL)
+// ═══════════════════════════════════════════════════════════════════════════
+function drawSolutionOverlay(geo,p){
+  const canvas=setupCanvas();
+  const dpr=window.devicePixelRatio||1;
+  const vW=canvas._cssW, vH=canvas._cssH;
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,vW,vH);
+  if(!p.solvePath || p.solvePath.length<2) return;
+
+  const{W,H,cx,cy}=geo;
+  const fitScale=Math.min(vW/W,vH/H)*0.92;
+  const baseScale=fitScale;
+  const ox=vW/2-cx*baseScale, oy=vH/2-cy*baseScale;
+  function projPt(x,y){ return[ox+x*baseScale, oy+y*baseScale]; }
+
+  const solPts=p.solvePath;
+  const solColor=p.themeKey==='red'?'rgba(255,80,80,0.85)':p.themeKey==='light'?'rgba(37,100,220,0.9)':'rgba(100,180,255,0.9)';
+  const lw=p.lw*baseScale;
+  const solW=Math.max(lw*1.8, 2*baseScale);
+
+  // Glow
+  ctx.beginPath();
+  const[sx0,sy0]=projPt(solPts[0][0],solPts[0][1]);
+  ctx.moveTo(sx0,sy0);
+  for(let i=1;i<solPts.length;i++){const[px,py]=projPt(solPts[i][0],solPts[i][1]);ctx.lineTo(px,py);}
+  ctx.lineWidth=solW*2.8;
+  ctx.strokeStyle=p.themeKey==='light'?'rgba(37,100,220,0.12)':'rgba(100,180,255,0.12)';
+  ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+  // Main path
+  ctx.beginPath();
+  ctx.moveTo(sx0,sy0);
+  for(let i=1;i<solPts.length;i++){const[px,py]=projPt(solPts[i][0],solPts[i][1]);ctx.lineTo(px,py);}
+  ctx.lineWidth=solW; ctx.strokeStyle=solColor;
+  ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+  // Start dot
+  ctx.beginPath(); ctx.arc(sx0,sy0,solW*1.6,0,Math.PI*2);
+  ctx.fillStyle=solColor; ctx.fill();
+  // Goal dot
+  const[gx,gy]=projPt(solPts[solPts.length-1][0],solPts[solPts.length-1][1]);
+  ctx.beginPath(); ctx.arc(gx,gy,solW*2,0,Math.PI*2);
+  ctx.fillStyle=solColor; ctx.fill();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SOLUTION THUMBNAIL (3D mode — 160×160 mini-map top-left of viewport)
+// ═══════════════════════════════════════════════════════════════════════════
+let _thumbScale=1; // zoom level for thumbnail
+
+function thumbZoom(factor){
+  _thumbScale=Math.max(0.25,Math.min(8, _thumbScale*factor));
+  if(_lastGeo) drawSolutionThumbnail(_lastGeo, getParams());
+}
+function thumbFit(){
+  _thumbScale=1;
+  if(_lastGeo) drawSolutionThumbnail(_lastGeo, getParams());
+}
+function thumbDownload(){
+  if(!_lastGeo) return;
+  const p=getParams();
+  const col=getDrawTheme(p.themeKey);
+  // Render at 1024×1024 for export
+  const EXPORT=1024;
+  const offCanvas=document.createElement('canvas');
+  offCanvas.width=EXPORT; offCanvas.height=EXPORT;
+  const ctx=offCanvas.getContext('2d');
+  const{ringData,cx,cy,W,H}=_lastGeo;
+  const pad=32;
+  const fitS=Math.min((EXPORT-pad*2)/W,(EXPORT-pad*2)/H);
+  const ox=EXPORT/2-cx*fitS, oy=EXPORT/2-cy*fitS;
+  function proj(x,y){return[ox+x*fitS,oy+y*fitS];}
+  // Background
+  ctx.fillStyle=col.bg; ctx.fillRect(0,0,EXPORT,EXPORT);
+  // Rings
+  ctx.strokeStyle=col.bg==='#ffffff'?'rgba(0,0,0,0.3)':'rgba(255,255,255,0.3)';
+  ctx.lineWidth=1.5; ctx.lineCap='round';
+  const er=ELL_ROT_DEG*D2R;
+  for(let i=0;i<p.rings;i++){
+    const{rx,ry,segs}=ringData[i];
+    for(const[a1,a2] of segs){
+      if(a2-a1<0.5) continue;
+      const steps=Math.max(12,Math.ceil(Math.abs(a2-a1)*0.4));
+      ctx.beginPath();
+      for(let s=0;s<=steps;s++){
+        const tDeg=a1+(a2-a1)*(s/steps), t=tDeg*D2R;
+        const x=cx+rx*Math.cos(t)*Math.cos(er)-ry*Math.sin(t)*Math.sin(er);
+        const y=cy+rx*Math.cos(t)*Math.sin(er)+ry*Math.sin(t)*Math.cos(er);
+        const[px,py]=proj(x,y); s===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+    }
+  }
+  // Solution path
+  if(p.solvePath&&p.solvePath.length>=2){
+    const sp=p.solvePath;
+    const solColor=p.themeKey==='red'?'rgba(255,80,80,0.9)':p.themeKey==='light'?'rgba(37,100,220,0.9)':'rgba(100,180,255,0.9)';
+    const solW=Math.max(3,fitS*p.lw*0.5);
+    const[sx0,sy0]=proj(sp[0][0],sp[0][1]);
+    // Glow
+    ctx.beginPath(); ctx.moveTo(sx0,sy0);
+    for(let i=1;i<sp.length;i++){const[px,py]=proj(sp[i][0],sp[i][1]);ctx.lineTo(px,py);}
+    ctx.lineWidth=solW*2.5; ctx.strokeStyle=p.themeKey==='light'?'rgba(37,100,220,0.12)':'rgba(100,180,255,0.12)';
+    ctx.lineJoin='round'; ctx.stroke();
+    // Line
+    ctx.beginPath(); ctx.moveTo(sx0,sy0);
+    for(let i=1;i<sp.length;i++){const[px,py]=proj(sp[i][0],sp[i][1]);ctx.lineTo(px,py);}
+    ctx.lineWidth=solW; ctx.strokeStyle=solColor; ctx.lineJoin='round'; ctx.stroke();
+    // Dots
+    ctx.fillStyle=solColor;
+    ctx.beginPath(); ctx.arc(sx0,sy0,solW*2,0,Math.PI*2); ctx.fill();
+    const[gx,gy]=proj(sp[sp.length-1][0],sp[sp.length-1][1]);
+    ctx.beginPath(); ctx.arc(gx,gy,solW*2.5,0,Math.PI*2); ctx.fill();
+  }
+  const a=document.createElement('a');
+  a.href=offCanvas.toDataURL('image/jpeg',0.95);
+  a.download='lmno-solution-1k.jpg';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function thumbClose(){
+  // Hide thumbnail and deactivate solution
+  window._solveActive=false;
+  window._solvePath=null;
+  document.getElementById('btn-solve').textContent='◎ Show Solution';
+  document.getElementById('btn-solve').className='sb-btn';
+  document.getElementById('thumb-wrap').style.display='none';
+  redrawViewOnly();
+}
+function drawSolutionThumbnail(geo, p){
+  const wrap=document.getElementById('thumb-wrap');
+  const thumb=document.getElementById('solutionThumb');
+  if(!thumb||!wrap) return;
+
+  // Hide if no solution or not in 3D
+  if(!p.is3d || !p.solvePath || p.solvePath.length<2){
+    wrap.style.display='none';
+    return;
+  }
+  wrap.style.display='flex';
+
+  const TW=160, TH=160; // CSS size — canvas is 200×200, scaled via CSS
+  const dpr=window.devicePixelRatio||1;
+  // Set backing store to 2× for sharpness (capped so we don't over-allocate)
+  const scale=Math.min(dpr,2);
+  thumb.width=Math.round(TW*scale);
+  thumb.height=Math.round(TH*scale);
+  const ctx=thumb.getContext('2d');
+  ctx.setTransform(scale,0,0,scale,0,0);
+
+  const{ringData,cx,cy,W,H}=geo;
+  const col=getDrawTheme(p.themeKey);
+
+  // Fit the labyrinth into the thumbnail with padding, then apply zoom
+  const pad=8;
+  const baseFit=Math.min((TW-pad*2)/W,(TH-pad*2)/H);
+  const fitS=baseFit*_thumbScale;
+  const ox=TW/2-cx*fitS, oy=TH/2-cy*fitS;
+  function proj(x,y){ return[ox+x*fitS, oy+y*fitS]; }
+
+  // Background
+  ctx.fillStyle=col.bg;
+  ctx.fillRect(0,0,TW,TH);
+
+  // Ring outlines (simplified — just stroke each arc segment)
+  ctx.strokeStyle=col.bg==='#ffffff'?'rgba(0,0,0,0.25)':'rgba(255,255,255,0.25)';
+  ctx.lineWidth=0.8;
+  ctx.lineCap='round';
+  const er=ELL_ROT_DEG*D2R;
+  for(let i=0;i<p.rings;i++){
+    const{rx,ry,segs}=ringData[i];
+    for(const[a1,a2] of segs){
+      if(a2-a1<0.5) continue;
+      const steps=Math.max(8,Math.ceil(Math.abs(a2-a1)*0.3));
+      ctx.beginPath();
+      for(let s=0;s<=steps;s++){
+        const tDeg=a1+(a2-a1)*(s/steps);
+        const t=tDeg*D2R;
+        const x=cx+rx*Math.cos(t)*Math.cos(er)-ry*Math.sin(t)*Math.sin(er);
+        const y=cy+rx*Math.cos(t)*Math.sin(er)+ry*Math.sin(t)*Math.cos(er);
+        const[px,py]=proj(x,y);
+        s===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+    }
+  }
+
+  // Solution path
+  const solPts=p.solvePath;
+  const solColor=p.themeKey==='red'?'rgba(255,80,80,0.9)':p.themeKey==='light'?'rgba(37,100,220,0.9)':'rgba(100,180,255,0.9)';
+  const solW=Math.max(1.2, fitS*p.lw*0.4);
+
+  // Glow
+  ctx.beginPath();
+  const[sx0,sy0]=proj(solPts[0][0],solPts[0][1]);
+  ctx.moveTo(sx0,sy0);
+  for(let i=1;i<solPts.length;i++){const[px,py]=proj(solPts[i][0],solPts[i][1]);ctx.lineTo(px,py);}
+  ctx.lineWidth=solW*2.5;
+  ctx.strokeStyle=p.themeKey==='light'?'rgba(37,100,220,0.12)':'rgba(100,180,255,0.12)';
+  ctx.lineJoin='round'; ctx.stroke();
+
+  // Main line
+  ctx.beginPath();
+  ctx.moveTo(sx0,sy0);
+  for(let i=1;i<solPts.length;i++){const[px,py]=proj(solPts[i][0],solPts[i][1]);ctx.lineTo(px,py);}
+  ctx.lineWidth=solW;
+  ctx.strokeStyle=solColor;
+  ctx.lineJoin='round'; ctx.stroke();
+
+  // Start dot
+  ctx.beginPath(); ctx.arc(sx0,sy0,solW*1.8,0,Math.PI*2);
+  ctx.fillStyle=solColor; ctx.fill();
+
+  // Goal dot
+  const[gx,gy]=proj(solPts[solPts.length-1][0],solPts[solPts.length-1][1]);
+  ctx.beginPath(); ctx.arc(gx,gy,solW*2.2,0,Math.PI*2);
+  ctx.fillStyle=solColor; ctx.fill();
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// 2D ORBIT RING RENDERER
+// Draws labyrinth rings in depth-sorted 3D orbital planes on the 2D canvas.
+// Gaps are respected (iterates ringData[i].segs). No nucleus, no dots.
+// ox/oy = canvas position of labyrinth centre; baseScale = px per lmno unit.
+// ═══════════════════════════════════════════════════════════════════════════
+function drawOrbit2DRings(ctx, ringData, N, p, ox, oy, baseScale){
+  const eccen    = parseFloat(document.getElementById('orbitEccen').value)  || 0;
+  const spread   = parseFloat(document.getElementById('orbitSpread').value) || 0;
+  const camTiltX = parseFloat(document.getElementById('orbitCamX').value)   || 0;
+  const col      = getDrawTheme(p.themeKey);
+  const lineCol  = LOGO_COLOURS[p.logoColor]||col.line;
+  const SEGS     = 120;
+
+  // Build ring list with average projected depth for painter's sort
+  const ringList=[];
+  for(let i=0;i<N;i++){
+    const rd=ringData[i];
+    const avgR=(rd.rx+rd.ry)/2;
+    const sa=Math.max(1, avgR+(i-(N-1)/2)*spread);
+    const b=Math.max(0.1, sa*(1-eccen));
+    let avgDepth=0;
+    for(let k=0;k<8;k++){
+      const u=(k/8)*2*Math.PI;
+      const p3=orbitRingPt3D(i,N,sa,b,u);
+      avgDepth+=o3dProject(p3.x,p3.y,p3.z,camTiltX,_camAzim2D).depth;
+    }
+    avgDepth/=8;
+    ringList.push({idx:i,sa,b,rd,avgDepth});
+  }
+  // Painter's algorithm: farthest first
+  ringList.sort((a,b2)=>b2.avgDepth-a.avgDepth);
+
+  ctx.save();
+  ctx.lineCap='round'; ctx.lineJoin='round';
+
+  for(const ring of ringList){
+    const{idx,sa,b,rd}=ring;
+
+    // Sample full ring to get depth range for shading
+    const allProj=[];
+    for(let k=0;k<=SEGS;k++){
+      const u=(k/SEGS)*2*Math.PI;
+      const p3=orbitRingPt3D(idx,N,sa,b,u);
+      allProj.push(o3dProject(p3.x,p3.y,p3.z,camTiltX,_camAzim2D));
+    }
+    const depthMin=Math.min(...allProj.map(q=>q.depth));
+    const depthMax=Math.max(...allProj.map(q=>q.depth));
+    const depthRange=depthMax-depthMin||1;
+
+    // Draw each visible arc segment, segment-by-segment with depth shading
+    for(const[a1,a2] of rd.segs){
+      if(a2-a1<0.5) continue;
+      const steps=Math.max(16, Math.ceil(Math.abs(a2-a1)*0.5));
+      for(let s=0;s<steps;s++){
+        const tDeg0=a1+(a2-a1)*(s/steps);
+        const tDeg1=a1+(a2-a1)*((s+1)/steps);
+        const p3_0=orbitRingPt3D(idx,N,sa,b,tDeg0*D2R);
+        const p3_1=orbitRingPt3D(idx,N,sa,b,tDeg1*D2R);
+        const proj0=o3dProject(p3_0.x,p3_0.y,p3_0.z,camTiltX,_camAzim2D);
+        const proj1=o3dProject(p3_1.x,p3_1.y,p3_1.z,camTiltX,_camAzim2D);
+        const d=Math.max(0,Math.min(1,(proj0.depth-depthMin)/depthRange)); // 0=front,1=back
+        const alpha=0.2+0.8*(1-d);
+        const lw=(p.lw+1.5*(1-d))*baseScale;
+        ctx.globalAlpha=alpha;
+        ctx.strokeStyle=lineCol;
+        ctx.lineWidth=lw;
+        ctx.shadowColor=lineCol;
+        ctx.shadowBlur=5*(1-d);
+        ctx.beginPath();
+        ctx.moveTo(ox+proj0.sx*baseScale, oy+proj0.sy*baseScale);
+        ctx.lineTo(ox+proj1.sx*baseScale, oy+proj1.sy*baseScale);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+function draw(geo,p,canvas,forExport=false){
+  const col=getDrawTheme(p.themeKey);
+  const{ringData,linkList,ls,logtx,logty,W,H,cx,cy}=geo;
+
+  const vW=canvas._cssW||(canvas.width/(window.devicePixelRatio||1));
+  const vH=canvas._cssH||(canvas.height/(window.devicePixelRatio||1));
+  const ctx=canvas.getContext('2d',{alpha:true});
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
+  ctx.clearRect(0,0,vW,vH);
+
+  const panX=forExport?(canvas._expPanX||0):(vpOffX||0);
+  const panY=forExport?(canvas._expPanY||0):(vpOffY||0);
+  const zoomS=forExport?(canvas._expZoom||1):(vpScale||1);
+  const fitScaleW=vW/W,fitScaleH=vH/H;
+  const fitScale=forExport?Math.min(fitScaleW,fitScaleH):Math.min(fitScaleW,fitScaleH)*0.92;
+  const canvasCX=vW/2,canvasCY=vH/2;
+
+  const baseScale=fitScale*zoomS;
+  const ox=canvasCX-cx*baseScale+panX;
+  const oy=canvasCY-cy*baseScale+panY;
+  const project=(wx,wy)=>[ox+(wx)*baseScale, oy+(wy)*baseScale];
+
+  // Background / artboard
+  const showCanvas=(p.showCanvas!==false);
+  const fw=vW/W,fh=vH/H;
+  const bs=Math.min(fw,fh)*(forExport?1.0:0.92);
+  const rW=W*bs,rH=H*bs;
+  const rx0=vW/2-rW/2,ry0=vH/2-rH/2;
+
+  if(forExport){
+    if(!canvas._transparentBg){ctx.fillStyle=col.bg;ctx.fillRect(0,0,vW,vH);}
+  } else if(showCanvas){
+    const outsideCol=col.bg==='#ffffff'?'#d8d8d8':col.bg==='#0c0c0c'?'#050505':'#060203';
+    ctx.fillStyle=outsideCol; ctx.fillRect(0,0,vW,vH);
+    ctx.fillStyle=col.bg; ctx.fillRect(rx0,ry0,rW,rH);
+    ctx.save();
+    ctx.strokeStyle=col.bg==='#ffffff'?'rgba(0,0,0,0.25)':'rgba(255,255,255,0.15)';
+    ctx.lineWidth=1;
+    ctx.strokeRect(rx0+0.5,ry0+0.5,rW-1,rH-1);
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath(); ctx.rect(rx0,ry0,rW,rH); ctx.clip();
+  } else {
+    ctx.fillStyle=col.bg; ctx.fillRect(0,0,vW,vH);
+  }
+
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  const lw=p.lw*baseScale;
+  // The 2D colour swatch drives the whole drawing: rings, links, boundary and letters.
+  const logoCol=LOGO_COLOURS[p.logoColor]||col.line;
+
+  // NOTE: ox/oy above already include the -cx/-cy centring offset, so points are projected
+  // in absolute canvas coordinates (same convention as drawOrbit2DRings and the solution
+  // overlay). The original subtracted cx/cy a second time, pushing the whole 2D drawing
+  // up and to the left by half the canvas.
+  function projPt(x,y){ return project(x, y); }
+
+  function strokeCanvasPoly(pts,w,style){
+    if(pts.length<2) return;
+    ctx.beginPath();
+    const[sx,sy]=projPt(pts[0][0],pts[0][1]);
+    ctx.moveTo(sx,sy);
+    for(let i=1;i<pts.length;i++){const[px,py]=projPt(pts[i][0],pts[i][1]);ctx.lineTo(px,py);}
+    ctx.lineWidth=w; ctx.strokeStyle=style; ctx.stroke();
+  }
+
+  // RINGS — flat (default) or 3D orbital (when orbit active in 2D mode)
+  if(_orbitActive && !p.is3d){
+    drawOrbit2DRings(ctx, ringData, p.rings, p, ox, oy, baseScale);
+  } else {
+    for(let i=0;i<p.rings;i++){
+      const{rx,ry,segs}=ringData[i];
+      for(const[a1,a2] of segs){
+        if(a2-a1<0.5) continue;
+        const steps=Math.max(16,Math.ceil(Math.abs(a2-a1)*0.5));
+        const pts=[];
+        for(let s=0;s<=steps;s++){
+          const tDeg=a1+(a2-a1)*(s/steps);
+          pts.push(ellPt(cx,cy,rx,ry,ELL_ROT_DEG,tDeg));
+        }
+        strokeCanvasPoly(pts,lw,logoCol);
+      }
+    }
+  }
+
+  // LINKS
+  const er=ELL_ROT_DEG*D2R;
+  for(const{ring:ri,angle} of linkList){
+    if(ri>=p.rings-1) continue;
+    const t=angle*D2R;
+    const r0=ringData[ri],r1=ringData[ri+1];
+    const x1=cx+r0.rx*Math.cos(t)*Math.cos(er)-r0.ry*Math.sin(t)*Math.sin(er);
+    const y1=cy+r0.rx*Math.cos(t)*Math.sin(er)+r0.ry*Math.sin(t)*Math.cos(er);
+    const x2=cx+r1.rx*Math.cos(t)*Math.cos(er)-r1.ry*Math.sin(t)*Math.sin(er);
+    const y2=cy+r1.rx*Math.cos(t)*Math.sin(er)+r1.ry*Math.sin(t)*Math.cos(er);
+    strokeCanvasPoly([[x1,y1],[x2,y2]],lw,logoCol);
+  }
+
+  // LMNO BOUNDARY ARCS
+  if(p.showArcs){
+    for(const d of ARC_SVG_PATHS){
+      const raw=sampleSVGPath(d,48);
+      const pts=raw.map(([lx,ly])=>[lx*ls+logtx, ly*ls+logty]);
+      strokeCanvasPoly(pts,lw,logoCol);
+    }
+  }
+
+  // LMNO LETTERS
+  if(p.showLetters){
+    for(const el of LETTERS){
+      if(el.type==='poly'){
+        strokeCanvasPoly(el.pts.map(([lx,ly])=>[lx*ls+logtx,ly*ls+logty]),lw,logoCol);
+      } else {
+        const rot=el.rot*D2R,pts=[];
+        for(let ii=0;ii<=64;ii++){
+          const t=(ii/64)*2*Math.PI;
+          const lx=el.cx+el.rx*Math.cos(t)*Math.cos(rot)-el.ry*Math.sin(t)*Math.sin(rot);
+          const ly=el.cy+el.rx*Math.cos(t)*Math.sin(rot)+el.ry*Math.sin(t)*Math.cos(rot);
+          pts.push([lx*ls+logtx, ly*ls+logty]);
+        }
+        pts.push(pts[0]);
+        strokeCanvasPoly(pts,lw,logoCol);
+      }
+    }
+  }
+
+  // ── SOLUTION PATH (2D only — in 3D mode drawn by drawSolutionOverlay) ──
+  if(p.solvePath && p.solvePath.length>=2 && !p.is3d){
+    const solPts=p.solvePath;
+    const solColor=p.themeKey==='red'?'rgba(255,80,80,0.85)':p.themeKey==='light'?'rgba(37,100,220,0.9)':'rgba(100,180,255,0.9)';
+    const solW=Math.max(lw*1.8, 2*baseScale);
+    // Draw glow/halo first
+    ctx.beginPath();
+    const[sx0,sy0]=projPt(solPts[0][0],solPts[0][1]);
+    ctx.moveTo(sx0,sy0);
+    for(let i=1;i<solPts.length;i++){const[px,py]=projPt(solPts[i][0],solPts[i][1]);ctx.lineTo(px,py);}
+    ctx.lineWidth=solW*2.8;
+    ctx.strokeStyle=p.themeKey==='light'?'rgba(37,100,220,0.12)':'rgba(100,180,255,0.12)';
+    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+    // Draw main path
+    ctx.beginPath();
+    ctx.moveTo(sx0,sy0);
+    for(let i=1;i<solPts.length;i++){const[px,py]=projPt(solPts[i][0],solPts[i][1]);ctx.lineTo(px,py);}
+    ctx.lineWidth=solW;
+    ctx.strokeStyle=solColor;
+    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke();
+    // Draw start dot (outside entry)
+    const[ex,ey]=projPt(solPts[0][0],solPts[0][1]);
+    ctx.beginPath(); ctx.arc(ex,ey,solW*1.6,0,Math.PI*2);
+    ctx.fillStyle=solColor; ctx.fill();
+    // Draw goal dot (centre)
+    const[gx,gy]=projPt(solPts[solPts.length-1][0],solPts[solPts.length-1][1]);
+    ctx.beginPath(); ctx.arc(gx,gy,solW*2,0,Math.PI*2);
+    ctx.fillStyle=solColor; ctx.fill();
+  }
+
+  if(!forExport&&showCanvas) ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 2D ORBIT ANIMATION LOOP
+// Advances _camAzim2D each frame and repaints the canvas.
+// Active only in 2D mode while _orbitActive is true.
+// ═══════════════════════════════════════════════════════════════════════════
+function _tick2DOrbit(ts){
+  // Stop if orbit was toggled off or 3D mode activated
+  if(!_orbitActive || getParams().is3d){
+    _2dOrbitAnimId=null;
+    return;
+  }
+  if(_orbitLastTs!==null){
+    const dt=ts-_orbitLastTs;
+    const cs=parseFloat(document.getElementById('orbitCamSpd').value)||0;
+    _camAzim2D=(_camAzim2D+dt*(cs/1000))%360;
+  }
+  _orbitLastTs=ts;
+  if(_lastGeo){
+    const p=getParams();
+    const canvas=setupCanvas();
+    draw(_lastGeo,p,canvas,false);
+  }
+  _2dOrbitAnimId=requestAnimationFrame(_tick2DOrbit);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VIEWPORT (2D mode pan/zoom)
+// ═══════════════════════════════════════════════════════════════════════════
+let vpScale=1,vpOffX=0,vpOffY=0;
+let isPanning=false,panStartX=0,panStartY=0,panStartOX=0,panStartOY=0;
+let _lastGeo=null;
+
+function setupCanvas(){
+  const wrap=document.getElementById('wrap');
+  const canvas=document.getElementById('mainCanvas');
+  const dpr=window.devicePixelRatio||1;
+  const vW=wrap.clientWidth,vH=wrap.clientHeight;
+  const needW=Math.round(vW*dpr),needH=Math.round(vH*dpr);
+  if(canvas.width!==needW||canvas.height!==needH){canvas.width=needW;canvas.height=needH;}
+  canvas.style.width=vW+'px'; canvas.style.height=vH+'px';
+  canvas.style.left='0'; canvas.style.top='0';
+  canvas._cssW=vW; canvas._cssH=vH; canvas._dpr=dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return canvas;
+}
+
+function applyViewport(){
+  document.getElementById('zoom-info').textContent=Math.round(vpScale*100)+'%';
+  if(window._redrawQueued) return;
+  window._redrawQueued=true;
+  requestAnimationFrame(()=>{window._redrawQueued=false;redrawViewOnly();});
+}
+
+function resetView(){vpScale=1;vpOffX=0;vpOffY=0;applyViewport();}
+function doZoom(factor){
+  vpScale=Math.max(0.1,Math.min(10,vpScale*factor));
+  applyViewport();
+}
+
+// Unified view controls — 2D or 3D depending on mode
+function viewZoomIn(){
+  if(getParams().is3d){
+    if(!_threeCamera||!_threeControls) return;
+    if(_threeCamera===_threeOrthoCamera){
+      _threeCamera.zoom=Math.min(_threeCamera.zoom*1.25,20);
+      _threeCamera.updateProjectionMatrix();
+    } else {
+      // Move camera 20% closer to target along the look direction
+      const dir=new THREE.Vector3();
+      dir.subVectors(_threeControls.target,_threeCamera.position).normalize();
+      const dist=_threeCamera.position.distanceTo(_threeControls.target);
+      _threeCamera.position.addScaledVector(dir, dist*0.2);
+    }
+    _threeControls.update();
+    const p=getParams();
+    const col=getDrawTheme(p.themeKey);
+    _threeRenderer.setClearColor(parseInt(col.bg.replace('#',''),16),1);
+    _threeRenderer.render(_threeScene,_threeCamera);
+  } else { doZoom(1.25); }
+}
+function viewZoomOut(){
+  if(getParams().is3d){
+    if(!_threeCamera||!_threeControls) return;
+    if(_threeCamera===_threeOrthoCamera){
+      _threeCamera.zoom=Math.max(_threeCamera.zoom*0.8,0.05);
+      _threeCamera.updateProjectionMatrix();
+    } else {
+      // Move camera 20% further from target
+      const dir=new THREE.Vector3();
+      dir.subVectors(_threeCamera.position,_threeControls.target).normalize();
+      const dist=_threeCamera.position.distanceTo(_threeControls.target);
+      _threeCamera.position.addScaledVector(dir, dist*0.25);
+    }
+    _threeControls.update();
+    const p=getParams();
+    const col=getDrawTheme(p.themeKey);
+    _threeRenderer.setClearColor(parseInt(col.bg.replace('#',''),16),1);
+    _threeRenderer.render(_threeScene,_threeCamera);
+  } else { doZoom(0.8); }
+}
+function viewReset(){
+  if(getParams().is3d){
+    if(_threeCamera===_threeOrthoCamera){
+      _threeCamera.zoom=1;
+      _threeCamera.updateProjectionMatrix();
+    } else {
+      _threeCamera.position.set(0,0,500);
+    }
+    if(_threeControls){
+      _threeControls.target.set(0,0,0);
+      _threeControls.update();
+    }
+    if(_threeGroup) _threeGroup.position.set(0,0,0);
+    const p=getParams();
+    const col=getDrawTheme(p.themeKey);
+    _threeRenderer.setClearColor(parseInt(col.bg.replace('#',''),16),1);
+    _threeRenderer.render(_threeScene,_threeCamera);
+  } else { resetView(); }
+}
+
+// Lock: snap to the LMNO logo's default 3D view and stop the camera/rotation sliders from moving it.
+const DEFAULT_VIEW={rotX:-28.4,rotY:-6.3,rotZ:-11.5,perspective:0};
+function applyViewLock(){
+  if(_threeControls) _threeControls.enableRotate=!_viewLocked;
+  ['rotX','rotY','rotZ'].forEach(id=>{
+    const el=document.getElementById(id), row=el&&el.closest('.row');
+    if(row){ row.style.opacity=_viewLocked?'0.45':''; row.style.pointerEvents=_viewLocked?'none':''; }
+  });
+  const btn=document.getElementById('btn-viewlock');
+  if(btn){
+    btn.classList.toggle('active',_viewLocked);
+    btn.textContent=_viewLocked?'🔒':'🔓';
+    btn.title=_viewLocked?"Locked to default 3D view — click to unlock":"Lock to the LMNO logo's default 3D view";
+  }
+}
+function toggleViewLock(){
+  _viewLocked=!_viewLocked;
+  if(_viewLocked && _threeRenderer){
+    Object.entries(DEFAULT_VIEW).forEach(([k,v])=>setSlider(k,v));
+    [_threePerspCamera,_threeOrthoCamera].forEach(c=>{
+      c.position.set(0,0,500); c.up.set(0,1,0); c.zoom=1; c.updateProjectionMatrix(); c.lookAt(0,0,0);
+    });
+    if(_threeControls){ _threeControls.target.set(0,0,0); _threeControls.update(); }
+    if(_threeGroup) _threeGroup.position.set(0,0,0);
+    redrawViewOnly();
+  }
+  applyViewLock();
+}
+
+function redrawViewOnly(){
+  if(!_lastGeo) return;
+  const p=getParams();
+  if(p.is3d){
+    renderThree(p);
+    drawSolutionThumbnail(_lastGeo,p);
+  } else {
+    const canvas=setupCanvas();
+    draw(_lastGeo,p,canvas,false);
+  }
+}
+
+// 2D mouse/touch events (only active when mode3d class is absent)
+document.getElementById('wrap').addEventListener('wheel',e=>{
+  if(getParams().is3d) return;
+  e.preventDefault();
+  const factor=e.deltaY<0?1.1:0.9;
+  const rect=document.getElementById('wrap').getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  const prevScale=vpScale;
+  vpScale=Math.max(0.1,Math.min(10,vpScale*factor));
+  vpOffX=mx-(mx-vpOffX)*(vpScale/prevScale);
+  vpOffY=my-(my-vpOffY)*(vpScale/prevScale);
+  applyViewport();
+},{passive:false});
+
+const wrapEl=document.getElementById('wrap');
+wrapEl.addEventListener('mousedown',e=>{
+  if(getParams().is3d) return;
+  if(e.button!==0) return;
+  isPanning=true;
+  panStartX=e.clientX;panStartY=e.clientY;
+  panStartOX=vpOffX;panStartOY=vpOffY;
+});
+window.addEventListener('mousemove',e=>{
+  if(!isPanning) return;
+  vpOffX=panStartOX+(e.clientX-panStartX);
+  vpOffY=panStartOY+(e.clientY-panStartY);
+  applyViewport();
+});
+window.addEventListener('mouseup',()=>{isPanning=false;});
+
+let lastTouchDist=0,lastTouchMidX=0,lastTouchMidY=0;
+wrapEl.addEventListener('touchstart',e=>{
+  if(getParams().is3d) return;
+  if(e.touches.length===1){
+    isPanning=true;
+    panStartX=e.touches[0].clientX;panStartY=e.touches[0].clientY;
+    panStartOX=vpOffX;panStartOY=vpOffY;
+  } else if(e.touches.length===2){
+    isPanning=false;
+    const dx=e.touches[1].clientX-e.touches[0].clientX;
+    const dy=e.touches[1].clientY-e.touches[0].clientY;
+    lastTouchDist=Math.hypot(dx,dy);
+    lastTouchMidX=(e.touches[0].clientX+e.touches[1].clientX)/2;
+    lastTouchMidY=(e.touches[0].clientY+e.touches[1].clientY)/2;
+  }
+},{passive:true});
+wrapEl.addEventListener('touchmove',e=>{
+  if(getParams().is3d) return;
+  if(e.touches.length===1&&isPanning){
+    vpOffX=panStartOX+(e.touches[0].clientX-panStartX);
+    vpOffY=panStartOY+(e.touches[0].clientY-panStartY);
+    applyViewport();
+  } else if(e.touches.length===2){
+    const dx=e.touches[1].clientX-e.touches[0].clientX;
+    const dy=e.touches[1].clientY-e.touches[0].clientY;
+    const dist=Math.hypot(dx,dy);
+    const midX=(e.touches[0].clientX+e.touches[1].clientX)/2;
+    const midY=(e.touches[0].clientY+e.touches[1].clientY)/2;
+    const factor=dist/lastTouchDist;
+    const prev=vpScale;
+    vpScale=Math.max(0.1,Math.min(10,vpScale*factor));
+    vpOffX=midX-(midX-vpOffX)*(vpScale/prev);
+    vpOffY=midY-(midY-vpOffY)*(vpScale/prev);
+    lastTouchDist=dist;
+    applyViewport();
+  }
+},{passive:true});
+wrapEl.addEventListener('touchend',()=>{isPanning=false;},{passive:true});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PARAMS
+// ═══════════════════════════════════════════════════════════════════════════
+function getParams(){
+  return{
+    cw:         parseInt(document.getElementById('cw').value)||900,
+    ch:         parseInt(document.getElementById('ch').value)||900,
+    rings:      parseInt(document.getElementById('rings').value),
+    spacing:    parseInt(document.getElementById('spacing').value),
+    logoscale:  parseInt(document.getElementById('logoscale').value),
+    proximity:  parseInt(document.getElementById('proximity').value),
+    gaps:       parseInt(document.getElementById('gaps').value),
+    gapSize:    parseFloat(document.getElementById('gapsize').value),
+    gapOffset:  parseFloat(document.getElementById('gapoffset').value),
+    jitter:     parseFloat(document.getElementById('jitter').value),
+    linkPct:    parseInt(document.getElementById('linkpct').value),
+    linkGapDeg: parseInt(document.getElementById('linkgap').value),
+    lw:         parseFloat(document.getElementById('lw').value),
+    seedVal:    parseInt(document.getElementById('seed').value),
+    themeKey:   document.getElementById('theme').value,
+    showLetters:document.getElementById('showLetters').classList.contains('on'),
+    showArcs:   document.getElementById('showArcs').classList.contains('on'),
+    is3d:       document.getElementById('toggle3d').classList.contains('on'),
+    rotX:       parseFloat(document.getElementById('rotX').value),
+    rotY:       parseFloat(document.getElementById('rotY').value),
+    rotZ:       parseFloat(document.getElementById('rotZ').value),
+    perspective:parseFloat(document.getElementById('perspective').value),
+    extDepth:   parseFloat(document.getElementById('extDepth').value),
+    thickness:  parseFloat(document.getElementById('thickness').value),
+    logoColor:  window._logoColor||'black',
+    showCanvas: window._showCanvas!==false,
+    solvePath:  window._solveActive ? window._solvePath : null,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REDRAW
+// ═══════════════════════════════════════════════════════════════════════════
+function redraw(){
+  const p=getParams();
+  // Apply theme class carefully (preserve frenzy and mode3d)
+  const t=p.themeKey;
+  let cls=t==='light'?'theme-light':t==='red'?'theme-red':'';
+  if(window._frenzyMode) cls+=' frenzy-mode';
+  if(p.is3d) cls+=' mode3d';
+  document.body.className=cls;
+
+  const is3d=p.is3d;
+  document.getElementById('panel3d').style.display=is3d?'flex':'none';
+  const q=document.getElementById('btn3d-quick');
+  q.className=is3d?'on':'';
+  document.getElementById('toggle3d').classList.toggle('on',is3d);
+
+  const geo=buildGeometry(p);
+  _lastGeo=geo;
+
+  // If solve is active, recompute path for new geometry
+  if(window._solveActive){
+    const result=solveMaze(geo,p);
+    if(result){
+      window._solvePath=solutionToPoints(result,geo);
+      document.getElementById('btn-solve').textContent='◎ Hide Solution';
+      document.getElementById('btn-solve').className='sb-btn solving';
+      document.getElementById('unsolvable-warning').style.display='none';
+      document.getElementById('btn-force').style.display='none';
+    } else {
+      window._solvePath=null;
+      document.getElementById('btn-solve').textContent='◎ Show Solution';
+      document.getElementById('btn-solve').className='sb-btn';
+      document.getElementById('unsolvable-warning').style.display='block';
+      document.getElementById('btn-force').style.display='';
+    }
+  } else {
+    document.getElementById('unsolvable-warning').style.display='none';
+    document.getElementById('btn-force').style.display='none';
+  }
+
+  if(is3d){
+    initThree();
+    sizeThreeRenderer();
+    buildThreeGeometry(geo,p);
+    renderThree(p);
+    // Clear mainCanvas overlay (no path drawn in 3D mode — thumbnail handles it)
+    const oc=setupCanvas();
+    oc.getContext('2d').clearRect(0,0,oc.width,oc.height);
+    drawSolutionThumbnail(geo,p);
+  } else {
+    const canvas=setupCanvas();
+    draw(geo,p,canvas,false);
+    // Hide thumbnail when in 2D mode
+    const t=document.getElementById('thumb-wrap');
+    if(t) t.style.display='none';
+    // If orbit was active and we just switched back from 3D, restart 2D loop
+    if(_orbitActive && !_2dOrbitAnimId){
+      _orbitLastTs=null;
+      _2dOrbitAnimId=requestAnimationFrame(_tick2DOrbit);
+    }
+  }
+
+  applyViewport();
+
+  document.getElementById('st-rings').textContent=`${p.rings} rings · ${p.spacing}px`;
+  document.getElementById('st-gaps').textContent=`${p.gaps} gaps × ${p.gapSize}°`;
+  document.getElementById('st-links').textContent=`links ${p.linkPct}%`;
+  document.getElementById('st-seed').textContent=`seed ${p.seedVal}`;
+  document.getElementById('st-3d').textContent=is3d?`3D X${parseFloat(p.rotX).toFixed(1)}° Y${parseFloat(p.rotY).toFixed(1)}° Z${parseFloat(p.rotZ||0).toFixed(1)}° d${p.extDepth}`:'';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════════════════════════════
+function toggle3D(){
+  document.getElementById('toggle3d').classList.toggle('on');
+  redraw();
+}
+
+function toggleCanvasBorder(){
+  window._showCanvas=!window._showCanvas;
+  const btn=document.getElementById('tb-canvas-tog');
+  btn.classList.toggle('active',window._showCanvas);
+  btn.textContent=window._showCanvas?'Canvas On':'Canvas Off';
+  redrawViewOnly();
+}
+
+function setLogoColor(c){
+  window._logoColor=c;
+  ['sw-white','sw-black','sw-red'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById('sw-'+c).classList.add('active');
+  redraw();
+}
+
+function checkSizeWarn(){
+  const cw=parseInt(document.getElementById('cw').value)||0;
+  const ch=parseInt(document.getElementById('ch').value)||0;
+  document.getElementById('size-warn').style.display=(cw>4000||ch>4000)?'inline':'none';
+}
+
+function reset3DDefaults(){
+  setSlider('rotX',-28.4);setSlider('rotY',-6.3);setSlider('rotZ',-11.5);
+  setSlider('perspective',0);
+  setSlider('extDepth',0);
+  setSlider('thickness',1);
+  // Reset face colours to defaults (labyrinth + logo geometry)
+  const FACE_DEFAULTS={TOP_CAP:'#C0201E',BOT_CAP:'#0A0A0A',OUTER_WALL:'#888888',INNER_WALL:'#888888',RULING_FACE:'#888888',
+    LMNO_TOP:'#C0201E',LMNO_BOT:'#0A0A0A',LMNO_OUTER:'#888888',LMNO_INNER:'#888888',LMNO_RULING:'#888888'};
+  Object.entries(FACE_DEFAULTS).forEach(([k,v])=>setFaceColour(k,v));
+  redraw();
+}
+
+function resetAllDefaults(){
+  if(window._frenzyMode) disableFrenzy();
+  setSlider('rings',12);setSlider('spacing',20);setSlider('logoscale',70);setSlider('proximity',0);
+  setSlider('gaps',2);setSlider('gapsize',14);setSlider('gapoffset',40);setSlider('jitter',10);
+  setSlider('linkpct',0);setSlider('linkgap',40);
+  document.getElementById('theme').value='light';
+  setSlider('lw',1.5);
+  document.getElementById('showLetters').classList.add('on');
+  document.getElementById('showArcs').classList.add('on');
+  setLogoColor('black');
+  document.getElementById('toggle3d').classList.remove('on');
+  if(_viewLocked){ _viewLocked=false; applyViewLock(); }
+  reset3DDefaults();
+  setSlider('seed',137);
+  vpScale=1;vpOffX=0;vpOffY=0;
+  window._solveActive=false;window._solvePath=null;
+  document.getElementById('btn-solve').textContent='◎ Show Solution';
+  document.getElementById('btn-solve').className='sb-btn';
+  document.getElementById('unsolvable-warning').style.display='none';
+  document.getElementById('btn-force').style.display='none';
+  ['easy','medium','hard'].forEach(d=>document.getElementById('diff-'+d).classList.remove('active'));
+  redraw();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SLIDER WIRING
+// ═══════════════════════════════════════════════════════════════════════════
+const IS_DEG=new Set(['gapsize','gapoffset','rotX','rotY','rotZ','perspective','linkgap']);
+const IS_PCT=new Set(['logoscale','linkpct']);
+
+function setSlider(id,val){
+  const el=document.getElementById(id);
+  const vEl=document.getElementById(id+'-v');
+  if(!el) return;
+  el.value=val;
+  if(vEl){
+    const sfx=IS_DEG.has(id)?'°':IS_PCT.has(id)?'%':'';
+    const disp=IS_DEG.has(id)&&id.startsWith('rot')?parseFloat(val).toFixed(1):val;
+    vEl.textContent=disp+sfx;
+  }
+}
+
+// 3D rotation/perspective sliders: only re-render (no geometry rebuild)
+const ROT_SLIDERS=new Set(['rotX','rotY','rotZ','perspective']);
+
+[
+  'rings','spacing','logoscale','proximity','gaps','gapsize','gapoffset','jitter',
+  'linkpct','linkgap','lw','seed','rotX','rotY','rotZ','perspective','extDepth','thickness'
+].forEach(id=>{
+  const el=document.getElementById(id);
+  const vEl=document.getElementById(id+'-v');
+  if(!el||!vEl) return;
+  el.addEventListener('input',()=>{
+    const v=parseFloat(el.value);
+    const sfx=IS_DEG.has(id)?'°':IS_PCT.has(id)?'%':'';
+    const disp=IS_DEG.has(id)&&id.startsWith('rot')?v.toFixed(1):v;
+    vEl.textContent=disp+sfx;
+    // rotation/perspective in 3D mode: just re-render
+    const p=getParams();
+    if(p.is3d && ROT_SLIDERS.has(id)){
+      on3dParam();
+    } else {
+      redraw();
+    }
+  });
+});
+
+// Orbit parameter sliders — update display and (re)draw when not animating
+['orbitEccen','orbitSpread','orbitCamX','orbitCamSpd'].forEach(id=>{
+  const el=document.getElementById(id);
+  const vEl=document.getElementById(id+'-v');
+  if(!el||!vEl) return;
+  el.addEventListener('input',()=>{
+    const v=parseFloat(el.value);
+    vEl.textContent=id==='orbitCamX'?v+'°':v;
+    // If not currently animating, do a one-shot redraw so the static preview updates
+    if(!_2dOrbitAnimId) redrawViewOnly();
+  });
+});
+
+window.addEventListener('resize',()=>{
+  const p=getParams();
+  if(p.is3d){ sizeThreeRenderer(); renderThree(p); }
+  else redraw();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SIDEBAR RESIZE
+// ═══════════════════════════════════════════════════════════════════════════
+(function(){
+  const resizer=document.getElementById('sb-resizer');
+  const sidebar=document.getElementById('sidebar');
+  let dragging=false,startX=0,startW=0;
+  resizer.addEventListener('mousedown',e=>{
+    dragging=true;startX=e.clientX;startW=sidebar.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.style.cursor='col-resize';
+    document.body.style.userSelect='none';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove',e=>{
+    if(!dragging) return;
+    sidebar.style.width=Math.max(160,Math.min(420,startW+(e.clientX-startX)))+'px';
+  });
+  window.addEventListener('mouseup',()=>{
+    if(!dragging) return;
+    dragging=false;resizer.classList.remove('dragging');
+    document.body.style.cursor='';document.body.style.userSelect='';
+    redraw();
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════════════════════
+function buildFilename(ext){
+  const p=getParams();
+  const prx=p.proximity!==0?`_prx${p.proximity}`:'';
+  const d3=p.is3d?`_3d-rx${parseFloat(p.rotX).toFixed(1)}_ry${parseFloat(p.rotY).toFixed(1)}_d${p.extDepth}`:'';
+  return `lmno-labyrinth_${p.cw}x${p.ch}_r${p.rings}_sp${p.spacing}_g${p.gaps}-${p.gapSize}deg_lk${p.linkPct}_lw${p.lw}_${p.themeKey}_seed${p.seedVal}${prx}${d3}.${ext}`;
+}
+
+function doExport(fmt){
+  const p=getParams();
+  if(fmt==='svg'&&p.is3d){
+    document.getElementById('svg3dModal').style.display='flex';
+    return;
+  }
+
+  if(fmt==='svg'){
+    const geo=_lastGeo||buildGeometry(p);
+    const{ringData,linkList,ls,logtx,logty,W,H,cx,cy}=geo;
+    const col=getDrawTheme(p.themeKey);
+    const svgLogoCol=LOGO_COLOURS[p.logoColor]||col.line;
+    const er=ELL_ROT_DEG*D2R;
+
+    let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`;
+    s+=`<rect width="${W}" height="${H}" fill="${col.bg}"/>`;
+
+    s+=`<g fill="none" stroke="${svgLogoCol}" stroke-width="${p.lw}" stroke-linecap="round" stroke-linejoin="round">`;
+    function arcD(rx,ry,a1,a2){
+      const steps=Math.max(6,Math.ceil(Math.abs(a2-a1)*1.8));let d='';
+      for(let i=0;i<=steps;i++){
+        const t=(a1+(a2-a1)*(i/steps))*D2R;
+        const x=cx+rx*Math.cos(t)*Math.cos(er)-ry*Math.sin(t)*Math.sin(er);
+        const y=cy+rx*Math.cos(t)*Math.sin(er)+ry*Math.sin(t)*Math.cos(er);
+        d+=i===0?`M${x.toFixed(2)},${y.toFixed(2)}`:`L${x.toFixed(2)},${y.toFixed(2)}`;
+      }
+      return d;
+    }
+    for(let i=0;i<p.rings;i++){
+      const{rx,ry,segs}=ringData[i];
+      for(const[a1,a2] of segs){if(a2-a1<0.5)continue;s+=`<path d="${arcD(rx,ry,a1,a2)}"/>`;}
+    }
+    for(const{ring:i,angle} of linkList){
+      if(i>=p.rings-1)continue;
+      const t=angle*D2R;
+      const r0=ringData[i],r1=ringData[i+1];
+      const x1=cx+r0.rx*Math.cos(t)*Math.cos(er)-r0.ry*Math.sin(t)*Math.sin(er);
+      const y1=cy+r0.rx*Math.cos(t)*Math.sin(er)+r0.ry*Math.sin(t)*Math.cos(er);
+      const x2=cx+r1.rx*Math.cos(t)*Math.cos(er)-r1.ry*Math.sin(t)*Math.sin(er);
+      const y2=cy+r1.rx*Math.cos(t)*Math.sin(er)+r1.ry*Math.sin(t)*Math.cos(er);
+      s+=`<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"/>`;
+    }
+    s+=`</g>`;
+
+    s+=`<g fill="none" stroke="${svgLogoCol}" stroke-width="${p.lw}" stroke-linecap="round" stroke-linejoin="round">`;
+    if(p.showArcs){
+      for(const d of ARC_SVG_PATHS){
+        const raw=sampleSVGPath(d,48);let pd='';
+        raw.forEach(([lx,ly],i)=>{const x=lx*ls+logtx,y=ly*ls+logty;pd+=i===0?`M${x.toFixed(2)},${y.toFixed(2)}`:`L${x.toFixed(2)},${y.toFixed(2)}`;});
+        s+=`<path d="${pd}"/>`;
+      }
+    }
+    if(p.showLetters){
+      for(const el of LETTERS){
+        if(el.type==='poly'){
+          let pd='';el.pts.forEach(([lx,ly],i)=>{const x=lx*ls+logtx,y=ly*ls+logty;pd+=i===0?`M${x.toFixed(2)},${y.toFixed(2)}`:`L${x.toFixed(2)},${y.toFixed(2)}`;});
+          s+=`<path d="${pd}"/>`;
+        } else {
+          const rot=el.rot*D2R;let pd='';
+          for(let i=0;i<=96;i++){const t=(i/96)*2*Math.PI;
+            const x=(el.cx+el.rx*Math.cos(t)*Math.cos(rot)-el.ry*Math.sin(t)*Math.sin(rot))*ls+logtx;
+            const y=(el.cy+el.rx*Math.cos(t)*Math.sin(rot)+el.ry*Math.sin(t)*Math.cos(rot))*ls+logty;
+            pd+=i===0?`M${x.toFixed(2)},${y.toFixed(2)}`:`L${x.toFixed(2)},${y.toFixed(2)}`;}
+          s+=`<path d="${pd}Z"/>`;
+        }
+      }
+    }
+    s+=`</g></svg>`;
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'}));
+    a.download=buildFilename('svg');a.click();
+    return;
+  }
+
+  // PNG / JPG
+  if(p.is3d){
+    // Capture Three.js canvas
+    const threeC=document.getElementById('threeCanvas');
+    // render one more frame to ensure it's up to date
+    renderThree(p);
+    const mime=fmt==='jpg'?'image/jpeg':'image/png';
+    const a2=document.createElement('a');
+    a2.href=threeC.toDataURL(mime,0.95);
+    a2.download=buildFilename(fmt);a2.click();
+    return;
+  }
+
+  const exportMode=(document.getElementById('export-mode')||{}).value||'canvas';
+  const exportDpi=parseInt((document.getElementById('export-dpi')||{}).value||'300');
+  const dpr=Math.max(1,Math.round(exportDpi/72));
+  const geo=buildGeometry(p);
+  const hiC=document.createElement('canvas');
+  hiC.width=p.cw*dpr; hiC.height=p.ch*dpr;
+  const hiCtx=hiC.getContext('2d');
+  hiCtx.setTransform(dpr,0,0,dpr,0,0);
+
+  let expPanX=0,expPanY=0,expZoom=1;
+  if(exportMode==='canvas'){
+    const wrap3=document.getElementById('wrap');
+    const _vW=wrap3.clientWidth,_vH=wrap3.clientHeight;
+    const _bs=Math.min(_vW/p.cw,_vH/p.ch)*0.92;
+    expPanX=vpOffX/_bs;expPanY=vpOffY/_bs;expZoom=vpScale;
+  }
+
+  const exportCanvas={
+    width:p.cw*dpr,height:p.ch*dpr,_cssW:p.cw,_cssH:p.ch,_dpr:dpr,
+    _expPanX:expPanX,_expPanY:expPanY,_expZoom:expZoom,
+    _transparentBg:(fmt==='png'),
+    getContext(){hiCtx.setTransform(dpr,0,0,dpr,0,0);return hiCtx;}
+  };
+  draw(geo,{...p,showCanvas:false},exportCanvas,true);
+
+  const mime=fmt==='jpg'?'image/jpeg':'image/png';
+  const a2=document.createElement('a');
+  a2.href=hiC.toDataURL(mime,0.95);a2.download=buildFilename(fmt);a2.click();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// OBJ EXPORT — serialises all Three.js ribbon geometry to Wavefront OBJ
+// ═══════════════════════════════════════════════════════════════════════════
+function exportOBJ(){
+  const p=getParams();
+  if(!p.is3d){
+    alert('Switch to 3D mode to export OBJ geometry.');
+    return;
+  }
+  if(!_threeGroup||!_threeGroup.children.length){
+    alert('No 3D geometry to export. Enable 3D and generate the labyrinth first.');
+    return;
+  }
+
+  const lines=['# LMNO Labyrinth Generator — OBJ export','# https://l-m-n-o.com',''];
+  let vOffset=1; // OBJ vertex indices are 1-based
+
+  // Face group names matching material keys
+  const groupNames={
+    0:'top_cap', 1:'bottom_cap', 2:'outer_wall', 3:'inner_wall', 4:'ruling_face'
+  };
+
+  _threeGroup.children.forEach((mesh,mi)=>{
+    const geom=mesh.geometry;
+    if(!geom) return;
+    const pos=geom.attributes.position;
+    if(!pos) return;
+    const n=pos.count;
+
+    lines.push(`g ${groupNames[mi]||'face_'+mi}`);
+
+    // Write vertices (apply group world matrix for correct position)
+    mesh.updateWorldMatrix(true,false);
+    const mat=mesh.matrixWorld;
+    const tmp=new THREE.Vector3();
+    for(let i=0;i<n;i++){
+      tmp.set(pos.getX(i),pos.getY(i),pos.getZ(i));
+      tmp.applyMatrix4(mat);
+      lines.push(`v ${tmp.x.toFixed(4)} ${tmp.y.toFixed(4)} ${tmp.z.toFixed(4)}`);
+    }
+
+    // Write faces (triangles, groups of 3 vertices)
+    for(let i=0;i<n;i+=3){
+      const a=vOffset+i, b=vOffset+i+1, c=vOffset+i+2;
+      lines.push(`f ${a} ${b} ${c}`);
+    }
+    lines.push('');
+    vOffset+=n;
+  });
+
+  const blob=new Blob([lines.join('\n')],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const p2=getParams();
+  a.download=`lmno-labyrinth_r${p2.rings}_d${p2.extDepth}_seed${p2.seedVal}.obj`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FRENZY
+// ═══════════════════════════════════════════════════════════════════════════
+window._logoColor='black';
+window._showCanvas=true;
+window._frenzyMode=false;
+window._solveActive=false;
+window._solvePath=null;
+
+const FRENZY_SLIDERS={
+  rings:      {norm:[3,24],    fren:[1,500]},
+  spacing:    {norm:[6,44],    fren:[1,500]},
+  logoscale:  {norm:[20,130],  fren:[1,1000]},
+  proximity:  {norm:[-60,30],  fren:[-500,500]},
+  gaps:       {norm:[1,8],     fren:[0,100]},
+  gapsize:    {norm:[3,40],    fren:[0,720]},
+  gapoffset:  {norm:[0,120],   fren:[0,1440]},
+  jitter:     {norm:[0,40],    fren:[0,1000]},
+  linkpct:    {norm:[0,30],    fren:[0,100]},
+  linkgap:    {norm:[10,90],   fren:[0,720]},
+  lw:         {norm:[0.5,5],   fren:[0.1,100]},
+  rotX:       {norm:[-180,180],fren:[-3600,3600]},
+  rotY:       {norm:[-180,180],fren:[-3600,3600]},
+  rotZ:       {norm:[-180,180],fren:[-3600,3600]},
+  perspective:{norm:[0,160],   fren:[0,360]},
+  extDepth:   {norm:[0,300],   fren:[0,5000]},
+  thickness:  {norm:[0,100],   fren:[0,2000]},
+};
+
+window._frenzySnapshot={};
+
+function toggleFrenzy(){
+  if(!window._frenzyMode){
+    document.getElementById('frenzy-modal').classList.add('show');
+  } else {
+    disableFrenzy();
+  }
+}
+
+function enableFrenzy(){
+  document.getElementById('frenzy-modal').classList.remove('show');
+  Object.keys(FRENZY_SLIDERS).forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) window._frenzySnapshot[id]=el.value;
+  });
+  window._frenzyMode=true;
+  document.getElementById('btn-frenzy').classList.add('on');
+  document.getElementById('btn-frenzy').querySelector('.frenzy-label').textContent=' Abort Frenzy';
+  document.body.classList.add('frenzy-mode');
+  Object.entries(FRENZY_SLIDERS).forEach(([id,{fren:[mn,mx]}])=>{
+    const slider=document.getElementById(id);
+    if(!slider) return;
+    slider.min=mn;slider.max=mx;
+    const ri=slider.closest('.ri');
+    if(!ri) return;
+    let fi=ri.querySelector('.frenzy-input');
+    if(!fi){
+      fi=document.createElement('input');
+      fi.type='number';fi.className='frenzy-input';
+      fi.title='Frenzy: type any value';
+      fi.addEventListener('input',()=>{
+        slider.min=Math.min(parseFloat(fi.value),mn);
+        slider.max=Math.max(parseFloat(fi.value),mx);
+        slider.value=fi.value;
+        slider.dispatchEvent(new Event('input'));
+      });
+      ri.appendChild(fi);
+    }
+    fi.value=slider.value;
+    fi.style.display='';
+    slider._frenzySync=()=>{if(fi)fi.value=slider.value;};
+    slider.addEventListener('input',slider._frenzySync);
+  });
+}
+
+function disableFrenzy(silent=false){
+  window._frenzyMode=false;
+  const btn=document.getElementById('btn-frenzy');
+  btn.classList.remove('on');
+  btn.querySelector('.frenzy-label').textContent=' FRENZY';
+  document.body.classList.remove('frenzy-mode');
+  Object.entries(FRENZY_SLIDERS).forEach(([id,{norm:[mn,mx]}])=>{
+    const slider=document.getElementById(id);
+    if(!slider) return;
+    slider.min=mn;slider.max=mx;
+    const snap=window._frenzySnapshot[id];
+    const restored=(!silent&&snap!==undefined)?parseFloat(snap):Math.max(mn,Math.min(mx,parseFloat(slider.value)));
+    slider.value=Math.max(mn,Math.min(mx,restored));
+    if(!silent) slider.dispatchEvent(new Event('input'));
+    if(slider._frenzySync){slider.removeEventListener('input',slider._frenzySync);delete slider._frenzySync;}
+    const ri=slider.closest('.ri');
+    if(ri){const fi=ri.querySelector('.frenzy-input');if(fi)fi.style.display='none';}
+  });
+  window._frenzySnapshot={};
+  if(!silent) redraw();
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RANDOMISE — every parameter is drawn independently across its full range, so the
+// combinations are open-ended: 2D/3D, orbit, frenzy, geometry, lens and colours.
+// ═══════════════════════════════════════════════════════════════════════════
+const _rnd=(a,b)=>a+Math.random()*(b-a);
+const _rndI=(a,b)=>Math.round(_rnd(a,b));
+const _rndStep=(a,b,step)=>Math.round(_rnd(a,b)/step)*step;
+const _pick=a=>a[Math.floor(Math.random()*a.length)];
+const _chance=pr=>Math.random()<pr;
+
+function setFaceColour(key,hex){
+  updateFaceColour(key,hex);
+  const row=document.querySelector('.face-colour-row[data-face="'+key+'"]');
+  if(row){ row.dataset.hex=hex; const sw=row.querySelector('.fc-swatch'); if(sw) sw.style.background=hex; }
+}
+
+function _hsl(h,sat,l){
+  h=((h%360)+360)%360; sat/=100; l/=100;
+  const k=n=>(n+h/30)%12, a=sat*Math.min(l,1-l);
+  const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  return '#'+[f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+// Random 5-face palette [top, bottom, outer wall, inner wall, ends & joins]
+function randPalette(){
+  const h=_rnd(0,360);
+  const scheme=_pick(['mono','analogous','complement','triad','split','free','neutral']);
+  const hues={
+    mono:[0,0,0,0,0], analogous:[0,25,-25,50,-50], complement:[0,180,0,180,90],
+    triad:[0,120,240,0,120], split:[0,150,210,30,180], free:[0,0,0,0,0].map(()=>_rnd(0,360)), neutral:[0,0,0,0,0],
+  }[scheme];
+  const sat=_rnd(35,100), light=_rnd(35,65);
+  const cols=hues.map((o,i)=>{
+    if(scheme==='neutral') return _hsl(h,_rnd(0,25),_rnd(8,92));
+    const hh=scheme==='free'?o:h+o;
+    return _hsl(hh,Math.max(10,Math.min(100,sat+_rnd(-20,15))),Math.max(8,Math.min(94,light+_rnd(-25,30))));
+  });
+  // keep the top and bottom caps clearly different
+  if(Math.abs(parseInt(cols[0].slice(1,3),16)-parseInt(cols[1].slice(1,3),16))<40) cols[1]=_hsl(h+_rnd(0,360),_rnd(20,90),_chance(0.5)?_rnd(6,20):_rnd(80,95));
+  return cols;
+}
+const FACE_KEYS_LAB=['TOP_CAP','BOT_CAP','OUTER_WALL','INNER_WALL','RULING_FACE'];
+const FACE_KEYS_LOGO=['LMNO_TOP','LMNO_BOT','LMNO_OUTER','LMNO_INNER','LMNO_RULING'];
+
+function randomise(){
+  document.querySelectorAll('.btn-random').forEach(b=>{ b.classList.remove('spin'); void b.offsetWidth; b.classList.add('spin'); });
+
+  const is3d=_chance(0.5);
+  const frenzy=_chance(0.15);
+  const wantOrbit=_chance(0.5);
+
+  // ── 1. settle the mode/state flags FIRST, without triggering any redraw ──
+  if(_orbitActive) toggleRingOrbit();
+  if(_viewLocked){ _viewLocked=false; applyViewLock(); }
+  if(window._frenzyMode&&!frenzy) disableFrenzy(true);
+  if(frenzy&&!window._frenzyMode) enableFrenzy();
+  window._solveActive=false; window._solvePath=null;
+  const sb=document.getElementById('btn-solve'); sb.textContent='◎ Show Solution'; sb.className='sb-btn';
+  document.getElementById('toggle3d').classList.toggle('on',is3d);
+  ['easy','medium','hard'].forEach(d=>document.getElementById('diff-'+d).classList.remove('active'));
+
+  // ── 2. maze shape ──
+  const F=frenzy;                                   // frenzy widens every range
+  const rings=F?_rndI(25,45):_rndI(3,24);
+  let spacing=F?_rndI(6,30):_rndI(6,50);
+  if(!is3d) spacing=Math.max(4,Math.min(spacing,Math.floor(440/rings)));   // keep 2D inside the artboard
+  const gaps=F?_rndI(1,20):_rndI(1,8);
+  const gapsize=Math.max(3,Math.min(F?_rndI(3,80):_rndI(3,40),Math.floor(220/gaps)));  // gaps never eat a whole ring
+  setSlider('rings',rings);
+  setSlider('spacing',spacing);
+  setSlider('gaps',gaps);
+  setSlider('gapsize',gapsize);
+  setSlider('gapoffset',_rndI(0,120));
+  setSlider('jitter',F?_rndI(0,150):_rndI(0,40));
+  setSlider('linkpct',_chance(0.3)?0:(F?_rndI(1,60):_rndI(1,30)));
+  setSlider('linkgap',_rndStep(10,90,5));
+  setSlider('lw',Math.round(_rnd(0.5,F?12:5)*2)/2);
+  setSlider('logoscale',_rndStep(F?20:30,F?200:120,2));
+  setSlider('proximity',_rndI(-60,30));
+  setSlider('seed',_rndI(1,999));
+  document.getElementById('showLetters').classList.toggle('on',_chance(0.85));
+  document.getElementById('showArcs').classList.toggle('on',_chance(0.8));
+
+  // ── 3. theme and 2D colour (always visible against the background) ──
+  const theme=_pick(['light','dark','red']);
+  document.getElementById('theme').value=theme;
+  const logoCol=_pick(theme==='light'?['black','red']:['white','red']);
+  window._logoColor=logoCol;
+  ['white','black','red'].forEach(c=>document.getElementById('sw-'+c).classList.toggle('active',c===logoCol));
+
+  // ── 4. 3D look ──
+  if(is3d){
+    setSlider('rotX',+_rnd(F?-720:-90,F?720:90).toFixed(1));
+    setSlider('rotY',+_rnd(F?-720:-180,F?720:180).toFixed(1));
+    setSlider('rotZ',+_rnd(F?-720:-180,F?720:180).toFixed(1));
+    setSlider('perspective',_chance(0.4)?0:_rndI(10,F?200:120));
+    setSlider('extDepth',_chance(0.2)?0:_rndI(1,F?300:120));
+    setSlider('thickness',Math.max(1,_rndI(1,Math.min(F?60:30,Math.max(1,Math.floor(spacing*(F?0.8:0.45)))))));
+    const lab=randPalette();
+    const logo=_chance(0.25)?lab:randPalette();
+    FACE_KEYS_LAB.forEach((k,i)=>setFaceColour(k,lab[i]));
+    FACE_KEYS_LOGO.forEach((k,i)=>setFaceColour(k,logo[i]));
+  }
+
+  // ── 5. orbit settings (used by both the 3D ring orbit and the 2D orbit view) ──
+  setSlider('orbitSpeed',_rndI(5,100));
+  const setPlain=(id,v,sfx='')=>{ const el=document.getElementById(id), vEl=document.getElementById(id+'-v'); if(el) el.value=v; if(vEl) vEl.textContent=v+sfx; };
+  setPlain('orbitEccen',+_rnd(0,0.95).toFixed(2));
+  setPlain('orbitSpread',_rndI(0,60));
+  setPlain('orbitCamX',_rndI(-90,90),'°');
+  setPlain('orbitCamSpd',_rndI(0,40));
+
+  // keep Frenzy number boxes in step with the sliders
+  document.querySelectorAll('.ri input[type=range]').forEach(sl=>{ if(sl._frenzySync) sl._frenzySync(); });
+
+  // ── 6. one redraw, then start the orbit ──
+  redraw();
+  if(wantOrbit) toggleRingOrbit();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════
+// Inject ‹ › arrow step buttons and double-click-to-min into every .ri slider
+document.querySelectorAll('.ri input[type=range]').forEach(sl=>{
+  const ri=sl.parentElement;
+  const btnL=document.createElement('button');
+  btnL.className='sl-arrow'; btnL.textContent='‹'; btnL.setAttribute('tabindex','-1');
+  btnL.addEventListener('mousedown',e=>e.preventDefault());
+  btnL.addEventListener('click',()=>{
+    const step=parseFloat(sl.step)||1;
+    sl.value=Math.max(parseFloat(sl.min), parseFloat(sl.value)-step);
+    sl.dispatchEvent(new Event('input'));
+  });
+  const btnR=document.createElement('button');
+  btnR.className='sl-arrow'; btnR.textContent='›'; btnR.setAttribute('tabindex','-1');
+  btnR.addEventListener('mousedown',e=>e.preventDefault());
+  btnR.addEventListener('click',()=>{
+    const step=parseFloat(sl.step)||1;
+    sl.value=Math.min(parseFloat(sl.max), parseFloat(sl.value)+step);
+    sl.dispatchEvent(new Event('input'));
+  });
+  ri.insertBefore(btnL, sl);
+  // Insert right arrow immediately after the slider, before the val span
+  const valSpan=ri.querySelector('.val');
+  if(valSpan) ri.insertBefore(btnR, valSpan);
+  else ri.appendChild(btnR);
+  // Double-click → reset to min (clamped ≥0)
+  sl.addEventListener('dblclick',()=>{
+    sl.value=Math.max(0, parseFloat(sl.min));
+    sl.dispatchEvent(new Event('input'));
+  });
+});
+
+document.getElementById('tb-canvas-tog').classList.add('active');
+document.getElementById('tb-canvas-tog').textContent='Canvas On';
+redraw();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MOBILE DOCK — on narrow portrait screens the controls sit under the canvas;
+// tapping the handle expands/collapses them and the canvas re-fits to the space.
+// ═══════════════════════════════════════════════════════════════════════════
+(function(){
+  const tb=document.getElementById('topbar'), mb=document.getElementById('tb-menu-btn');
+  function setMenu(open){
+    tb.classList.toggle('menu-open',open);
+    mb.setAttribute('aria-expanded',open?'true':'false');
+    mb.textContent=open?'Menu ▴':'Menu ▾';
+  }
+  mb.addEventListener('click',e=>{ e.stopPropagation(); setMenu(!tb.classList.contains('menu-open')); });
+  document.addEventListener('click',e=>{ if(!tb.contains(e.target)) setMenu(false); });
+  window.addEventListener('resize',()=>{ if(!mb.offsetParent) setMenu(false); });
+})();
+
+(function(){
+  const sb=document.getElementById('sidebar');
+  const hd=document.getElementById('sb-header');
+  const chev=document.getElementById('sheet-chev');
+  const mq=window.matchMedia('(max-width: 860px) and (min-height: 501px)');
+  let refitTimer=null;
+  function refit(){
+    clearTimeout(refitTimer);
+    refitTimer=setTimeout(()=>window.dispatchEvent(new Event('resize')),340);
+  }
+  function label(){ chev.textContent=sb.classList.contains('open')?'Close ▾':'Controls ▴'; }
+  function toggle(){
+    if(!mq.matches) return;
+    sb.classList.toggle('open');
+    hd.setAttribute('aria-expanded',sb.classList.contains('open')?'true':'false');
+    label(); refit();
+  }
+  function apply(){
+    sb.classList.remove('open');
+    if(mq.matches){ hd.setAttribute('role','button'); hd.setAttribute('tabindex','0'); hd.setAttribute('aria-expanded','false'); }
+    else { hd.removeAttribute('role'); hd.removeAttribute('tabindex'); hd.removeAttribute('aria-expanded'); }
+    label(); refit();
+  }
+  hd.addEventListener('click',toggle);
+  hd.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+  if(mq.addEventListener) mq.addEventListener('change',apply); else mq.addListener(apply);
+  apply();
+})();
+</script>
+</body>
+</html>
